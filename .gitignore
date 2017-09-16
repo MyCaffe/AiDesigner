@@ -13,7 +13,9 @@
 **/MyCaffe.app.setup/*
 **/_private/*
 **/_build/*
+**/_buildpre/*
 **/_nuget/*
+**/_references/*
 **/bin/*
 *.pro.*
 

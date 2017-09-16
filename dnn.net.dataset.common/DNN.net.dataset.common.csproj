@@ -63,11 +63,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>if not exist ..\..\..\DNN.net.app.designer\$(OutDir)\DatasetCreators md ..\..\..\DNN.net.app.designer\$(OutDir)\DatasetCreators
-%25systemroot%25\System32\xcopy /y $(TargetPath) ..\..\..\DNN.net.app.designer\$(OutDir)\DatasetCreators
-%25systemroot%25\System32\xcopy /y $(TargetDir)$(TargetName).pdb ..\..\..\DNN.net.app.designer\$(OutDir)\DatasetCreators
-if not exist c:\data\binaries\ss_projects\_release\DatasetCreators md c:\data\binaries\ss_projects\_Release\DatasetCreators
-%25systemroot%25\System32\xcopy /y $(TargetDir)$(TargetName)$(TargetExt) C:\Data\Binaries\SS_Projects\_Release\DatasetCreators
-%25systemroot%25\System32\xcopy /y $(TargetDir)$(TargetName).pdb C:\Data\Binaries\SS_Projects\_Release\DatasetCreators</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
 </Project>
