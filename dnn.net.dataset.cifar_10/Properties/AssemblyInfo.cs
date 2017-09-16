@@ -8,9 +8,9 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("DNN.net.dataset.cifar_10")]
 [assembly: AssemblyDescription("Making artificial intelligence easy!")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("SignalPOP LLC")]
-[assembly: AssemblyProduct("DNN.NET")]
-[assembly: AssemblyCopyright("Copyright © SignalPOP 2016-2017")]
+[assembly: AssemblyCompany("SignalPop LLC")]
+[assembly: AssemblyProduct("SignalPop AI Designer")]
+[assembly: AssemblyCopyright("Copyright © SignalPop 2016-2017")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -32,5 +32,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("0.9.0.271")]
-[assembly: AssemblyFileVersion("0.9.0.271")]
+[assembly: AssemblyVersion("0.9.0.272")]
+[assembly: AssemblyFileVersion("0.9.0.272")]
