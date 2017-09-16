@@ -1,0 +1,117 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{B3199763-D78C-49B2-A733-86C6E3473742}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>DNN.net.dataset.mnist</RootNamespace>
+    <AssemblyName>DNN.net.dataset.mnist</AssemblyName>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <SccProjectName>SAK</SccProjectName>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccProvider>SAK</SccProvider>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>dnn.net.dataset.mnist.pfx</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>MainIcon.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.1.3\lib\net45\EntityFramework.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.1.3\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="MyCaffe">
+      <HintPath>..\..\..\..\..\Binaries\SS_Projects\_Release\MyCaffe.dll</HintPath>
+    </Reference>
+    <Reference Include="MyCaffe.basecode">
+      <HintPath>..\..\..\..\..\Binaries\SS_Projects\_Release\MyCaffe.basecode.dll</HintPath>
+    </Reference>
+    <Reference Include="MyCaffe.imagedb">
+      <HintPath>..\..\..\..\..\Binaries\SS_Projects\_Release\MyCaffe.imagedb.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="DatasetCreatorComponent.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="DatasetCreatorComponent.Designer.cs">
+      <DependentUpon>DatasetCreatorComponent.cs</DependentUpon>
+    </Compile>
+    <Compile Include="MgrMnistData.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DNN.net.dataset.common\DNN.net.dataset.common.csproj">
+      <Project>{5BCA3EA3-D046-4567-AD16-570680AF0A40}</Project>
+      <Name>DNN.net.dataset.common</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+    <None Include="dnn.net.dataset.mnist.pfx" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="MainIcon.ico" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>if not exist ..\..\..\DNN.net.app.designer\$(OutDir)\DatasetCreators md ..\..\..\DNN.net.app.designer\$(OutDir)\DatasetCreators
+%25systemroot%25\System32\xcopy /y $(TargetPath) ..\..\..\DNN.net.app.designer\$(OutDir)\DatasetCreators
+%25systemroot%25\System32\xcopy /y $(TargetDir)$(TargetName).pdb ..\..\..\DNN.net.app.designer\$(OutDir)\DatasetCreators
+if not exist c:\data\binaries\ss_projects\_release\DatasetCreators md c:\data\binaries\ss_projects\_Release\DatasetCreators
+%25systemroot%25\System32\xcopy /y $(TargetDir)$(TargetName)$(TargetExt) C:\Data\Binaries\SS_Projects\_Release\DatasetCreators
+%25systemroot%25\System32\xcopy /y $(TargetDir)$(TargetName).pdb C:\Data\Binaries\SS_Projects\_Release\DatasetCreators
+</PostBuildEvent>
+  </PropertyGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
