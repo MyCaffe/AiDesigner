@@ -89,14 +89,14 @@ namespace DNN.net.dataset.common
 
             if (dlg.ShowDialog() == DialogResult.OK)
             {
-                int nFirstGPHFile = -1;
+                int nFirstFile = -1;
 
                 for (int i = 0; i < settings.Length; i++)
                 {
                     if (settings[i].Name.Contains(strExt.ToUpper()))
                     {
-                        if (nFirstGPHFile == -1)
-                            nFirstGPHFile = i;
+                        if (nFirstFile == -1)
+                            nFirstFile = i;
 
                         settings[i].Value = "";
                     }
@@ -110,7 +110,7 @@ namespace DNN.net.dataset.common
                     nIdx++;
                 }
 
-                for (int i = nFirstGPHFile; i < settings.Length; i++)
+                for (int i = nFirstFile; i < settings.Length; i++)
                 {
                     if (nIdx < rgstrFiles.Length && rgstrFiles[nIdx].Contains("." + strExt.ToLower()))
                     {
@@ -127,6 +127,45 @@ namespace DNN.net.dataset.common
                         break;
                 }
             }
+        }
+
+        public static void SaveToFile(DataConfigSetting[] settings, string strFile)
+        {
+            using (StreamWriter sw = new StreamWriter(strFile))
+            {
+                sw.WriteLine("Count;" + settings.Length.ToString());
+
+                for (int i = 0; i < settings.Length; i++)
+                {
+                    sw.WriteLine(settings[i].ToSaveString());
+                }
+            }
+        }
+
+        public static DataConfigSetting[] LoadFromFile(string strFile)
+        {
+            List<DataConfigSetting> rgSettings = new List<DataConfigSetting>();
+
+            using (StreamReader sr = new StreamReader(strFile))
+            {
+                string strCount = sr.ReadLine();
+                int nPos = strCount.IndexOf(';');
+                if (nPos < 0)
+                    throw new Exception("Missing 'Count;#'!");
+
+                strCount = strCount.Substring(nPos + 1);
+                int nCount = 0;
+
+                if (!int.TryParse(strCount, out nCount))
+                    throw new Exception("Missing 'Count;#'!");
+
+                for (int i = 0; i < nCount; i++)
+                {
+                    rgSettings.Add(DataConfigSetting.Parse(sr.ReadLine()));
+                }
+            }
+
+            return rgSettings.ToArray();
         }
     }
 
@@ -253,6 +292,7 @@ namespace DNN.net.dataset.common
         {
             TEXT,
             FILENAME,
+            FILENAME1,
             DIRECTORY,
             LIST,
             DATETIME,
@@ -306,6 +346,95 @@ namespace DNN.net.dataset.common
         {
             return m_strName + ": " + m_objValue.ToString();
         }
+
+        public string ToSaveString()
+        {
+            string strType = (m_type == TYPE.LIST) ? "TEXT" : m_type.ToString();
+            return m_strName + "; " + m_objValue.ToString() + "; " + strType + "; " + m_strExtra;
+        }
+
+        public static DataConfigSetting Parse(string str, IXDatasetCreatorSettings iVerify = null)
+        {
+            string[] rgstr = str.Split(';');
+
+            if (rgstr.Length < 3)
+                throw new Exception("Invalid setting '" + str + "'!");
+
+            string strName = rgstr[0].Trim();
+            string strVal = rgstr[1].Trim();
+            string strType = rgstr[2].Trim();
+            string strExtra = rgstr[3].Trim();
+            object objVal = getValue(strVal, strType, out TYPE type);
+
+            return new DataConfigSetting(strName, objVal, type, strExtra, iVerify);
+        }
+
+        private static object getValue(string strVal, string strType, out TYPE type)
+        {
+            if (strType == TYPE.INTEGER.ToString())
+            {
+                type = TYPE.INTEGER;
+                return int.Parse(strVal);
+            }
+            else if (strType == TYPE.REAL.ToString())
+            {
+                type = TYPE.REAL;
+                return double.Parse(strVal);
+            }
+            else if (strType == TYPE.DATETIME.ToString())
+            {
+                type = TYPE.DATETIME;
+                return DateTime.Parse(strVal);
+            }
+            else if (strType == TYPE.DIRECTORY.ToString())
+            {
+                type = TYPE.DIRECTORY;
+                return strVal;
+            }
+            else if (strType == TYPE.FILENAME.ToString())
+            {
+                type = TYPE.FILENAME;
+                return strVal;
+            }
+            else if (strType == TYPE.FILENAME1.ToString())
+            {
+                type = TYPE.FILENAME1;
+                return strVal;
+            }
+            else if (strType == TYPE.HELP.ToString())
+            { 
+                type = TYPE.HELP;
+                return strVal;
+            }
+            else if (strType == TYPE.CUSTOM.ToString())
+            {
+                type = TYPE.CUSTOM;
+                return strVal;
+            }
+            else if (strType == TYPE.LIST.ToString())
+            {
+                type = TYPE.LIST;
+                return getList(strVal);
+            }
+            else
+            {
+                type = TYPE.TEXT;
+                return strVal;
+            }
+        }
+
+        private static object getList(string str)
+        {
+            string[] rgstr = str.Split(',');
+            OptionItemList options = new OptionItemList();
+
+            for (int i = 0; i < rgstr.Length; i++)
+            {
+                options.Add(new OptionItem(rgstr[i], i));
+            }
+
+            return options;
+        }
     }
 
     public class OptionItem
@@ -331,6 +460,7 @@ namespace DNN.net.dataset.common
         public int Index
         {
             get { return m_nIdx; }
+            set { m_nIdx = value; }
         }
 
         public OptionItemList Options
@@ -429,6 +559,8 @@ namespace DNN.net.dataset.common
 
                 if (config[nIdx].Type == DataConfigSetting.TYPE.FILENAME)
                     return UITypeEditorEditStyle.Modal;
+                if (config[nIdx].Type == DataConfigSetting.TYPE.FILENAME1)
+                    return UITypeEditorEditStyle.Modal;
                 else if (config[nIdx].Type == DataConfigSetting.TYPE.DIRECTORY)
                     return UITypeEditorEditStyle.Modal;
                 else if (config[nIdx].Type == DataConfigSetting.TYPE.CUSTOM)
@@ -459,7 +591,8 @@ namespace DNN.net.dataset.common
             DataConfigSetting setting = value as DataConfigSetting;
             IWindowsFormsEditorService edSvc = (IWindowsFormsEditorService)provider.GetService(typeof(IWindowsFormsEditorService));
 
-            if (setting.Type == DataConfigSetting.TYPE.FILENAME)
+            if (setting.Type == DataConfigSetting.TYPE.FILENAME ||
+                setting.Type == DataConfigSetting.TYPE.FILENAME1)
             {
                 OpenFileDialog dlg = new OpenFileDialog();
 
@@ -467,6 +600,9 @@ namespace DNN.net.dataset.common
                 dlg.Title = "Select the " + setting.Name;
                 dlg.DefaultExt = setting.Extra;
                 dlg.FileName = (string)setting.Value;
+
+                if (setting.Type == DataConfigSetting.TYPE.FILENAME1)
+                    dlg.CheckFileExists = false;
 
                 if (dlg.ShowDialog() == DialogResult.OK)
                     setting.Value = dlg.FileName;
