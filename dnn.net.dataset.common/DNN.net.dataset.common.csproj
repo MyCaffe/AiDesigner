@@ -39,6 +39,9 @@
     <AssemblyOriginatorKeyFile>dnn.net.dataset.common.pfx</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="MyCaffe.basecode">
+      <HintPath>..\_references\MyCaffe.basecode.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />

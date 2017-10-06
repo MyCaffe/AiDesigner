@@ -7,6 +7,8 @@ using System.IO;
 using System.Windows.Forms;
 using System.Drawing.Design;
 using System.Windows.Forms.Design;
+using System.Drawing;
+using MyCaffe.basecode;
 
 namespace DNN.net.dataset.common
 {
@@ -15,6 +17,17 @@ namespace DNN.net.dataset.common
         string Name { get; }
         void QueryConfiguration(DatasetConfiguration config);
         void Create(DatasetConfiguration config, IXDatasetCreatorProgress progress);
+    }
+
+    /// <summary>
+    /// Optional interface to view the Debug data or Data Criteria data as an image.
+    /// </summary>
+    public interface IXDatasetViewer
+    {
+        SimpleDatum.DATA_FORMAT[] SupportedDebugDataFormats { get; }
+        Image ViewDebugData(byte[] rgData, SimpleDatum.DATA_FORMAT fmt);
+        SimpleDatum.DATA_FORMAT[] SupportedDataCriteriaFormats { get; }
+        Image ViewDataCriteria(byte[] rgData, SimpleDatum.DATA_FORMAT fmt);
     }
 
     public interface IXDatasetCreatorSettings
