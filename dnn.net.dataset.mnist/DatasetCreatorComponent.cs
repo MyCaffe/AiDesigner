@@ -105,8 +105,7 @@ namespace DNN.net.dataset.mnist
                 if (m_bCancel)
                     return;
 
-                
-                mgr.ConvertData(dsTrainingDataFile.Value.ToString(), dsTrainingLabelFile.Value.ToString(), strTrainingSrc, false, nChannels);
+                mgr.ConvertData(dsTrainingDataFile.Value.ToString(), dsTrainingLabelFile.Value.ToString(), strTrainingSrc, true, false, nChannels);
 
                 if (m_bCancel)
                     return;
@@ -117,7 +116,7 @@ namespace DNN.net.dataset.mnist
                     return;
 
 
-                mgr.ConvertData(dsTestingDataFile.Value.ToString(), dsTestingLabelFile.Value.ToString(), strTestingSrc, false, nChannels);
+                mgr.ConvertData(dsTestingDataFile.Value.ToString(), dsTestingLabelFile.Value.ToString(), strTestingSrc, false, false, nChannels);
 
                 if (m_bCancel)
                     return;

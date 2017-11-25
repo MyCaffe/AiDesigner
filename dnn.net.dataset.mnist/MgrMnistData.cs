@@ -8,6 +8,7 @@ using MyCaffe.common;
 using MyCaffe.basecode;
 using MyCaffe.data;
 using System.IO.Compression;
+using System.Threading;
 
 namespace DNN.net.dataset.mnist
 {
@@ -58,9 +59,10 @@ namespace DNN.net.dataset.mnist
             return strNewFile;
         }
 
-        public uint ConvertData(string strImageFile, string strLabelFile, string strDBPath, bool bGetItemCountOnly = false, int nChannels = 1)
+        public uint ConvertData(string strImageFile, string strLabelFile, string strDBPath, bool bCreateImgMean, bool bGetItemCountOnly = false, int nChannels = 1)
         {
             string strExt;
+            List<SimpleDatum> rgImg = new List<SimpleDatum>();
 
             strExt = Path.GetExtension(strImageFile).ToLower();
             if (strExt == ".gz")
@@ -120,7 +122,7 @@ namespace DNN.net.dataset.mnist
                 uint cols = image_file.ReadUInt32();
 
                 int nSrcId = m_factory.AddSource(strDBPath, nChannels, (int)cols, (int)rows, false, 0, true);
-                m_factory.Open(nSrcId);
+                m_factory.Open(nSrcId, 500, true); // use file based data.
                 m_factory.DeleteSourceData();
 
                 // Storing to db
@@ -155,6 +157,9 @@ namespace DNN.net.dataset.mnist
                     datum.SetData(rgData, (int)rgLabel[0]);
                     m_factory.PutRawImageCache(item_id, datum);
 
+                    if (bCreateImgMean)
+                        rgImg.Add(new SimpleDatum(datum));
+
                     if ((item_id % 1000) == 0)
                     {
                         if (m_log != null)
@@ -176,6 +181,13 @@ namespace DNN.net.dataset.mnist
 
                 m_factory.ClearImageCash(true);
                 m_factory.UpdateSourceCounts();
+
+                if (bCreateImgMean)
+                {
+                    m_log.WriteLine("Creating image mean...");
+                    SimpleDatum dMean = SimpleDatum.CalculateMean(m_log, rgImg.ToArray(), new WaitHandle[] { new ManualResetEvent(false) });
+                    m_factory.PutRawImageMean(dMean, true);
+                }
 
                 if (OnLoadProgress != null)
                 {

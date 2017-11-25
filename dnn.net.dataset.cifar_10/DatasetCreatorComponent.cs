@@ -10,6 +10,7 @@ using MyCaffe.basecode;
 using MyCaffe.imagedb;
 using MyCaffe.data;
 using DNN.net.dataset.common;
+using System.Threading;
 
 namespace DNN.net.dataset.cifar_10
 {
@@ -18,6 +19,7 @@ namespace DNN.net.dataset.cifar_10
         IXDatasetCreatorProgress m_iprogress = null;
         DatasetFactory m_factory = new DatasetFactory();
         bool m_bCancel = false;
+        List<SimpleDatum> m_rgImages = new List<SimpleDatum>();
 
         public DatasetCreatorComponent()
         {
@@ -102,32 +104,38 @@ namespace DNN.net.dataset.cifar_10
                     return;
 
                 int nTrainSrcId = m_factory.AddSource(strTrainingSrc, 3, 32, 32, false, 0);
-                m_factory.Open(nTrainSrcId);
+                m_factory.Open(nTrainSrcId, 500, true); // use file based data.
 
                 log.WriteLine("Deleting existing data from '" + m_factory.OpenSource.Name + "'.");
                 m_factory.DeleteSourceData();
 
-                if (!loadFile(log, dsTrainingDataFile1, m_factory, nTotal, ref nIdx))
+                if (!loadFile(log, dsTrainingDataFile1, m_factory, nTotal, true, ref nIdx))
                     return;
 
-                if (!loadFile(log, dsTrainingDataFile2, m_factory, nTotal, ref nIdx))
+                if (!loadFile(log, dsTrainingDataFile2, m_factory, nTotal, true, ref nIdx))
                     return;
 
-                if (!loadFile(log, dsTrainingDataFile3, m_factory, nTotal, ref nIdx))
+                if (!loadFile(log, dsTrainingDataFile3, m_factory, nTotal, true, ref nIdx))
                     return;
 
-                if (!loadFile(log, dsTrainingDataFile4, m_factory, nTotal, ref nIdx))
+                if (!loadFile(log, dsTrainingDataFile4, m_factory, nTotal, true, ref nIdx))
                     return;
 
-                if (!loadFile(log, dsTrainingDataFile5, m_factory, nTotal, ref nIdx))
+                if (!loadFile(log, dsTrainingDataFile5, m_factory, nTotal, true, ref nIdx))
                     return;
 
                 m_factory.UpdateSourceCounts();
                 updateLabels(m_factory);
+
+                log.WriteLine("Creating the image mean...");
+                SimpleDatum dMean = SimpleDatum.CalculateMean(log, m_rgImages.ToArray(), new WaitHandle[] { new ManualResetEvent(false) });
+                m_factory.PutRawImageMean(dMean, true);
+                m_rgImages.Clear();
+
                 m_factory.Close();
 
                 int nTestSrcId = m_factory.AddSource(strTestingSrc, 3, 32, 32, false, 0);
-                m_factory.Open(nTestSrcId);
+                m_factory.Open(nTestSrcId, 500, true); // use file based data.
 
                 log.WriteLine("Deleting existing data from '" + m_factory.OpenSource.Name + "'.");
                 m_factory.DeleteSourceData();
@@ -135,7 +143,7 @@ namespace DNN.net.dataset.cifar_10
                 nIdx = 0;
                 nTotal = 10000;
 
-                if (!loadFile(log, dsTestingDataFile, m_factory, nTotal, ref nIdx))
+                if (!loadFile(log, dsTestingDataFile, m_factory, nTotal, false, ref nIdx))
                     return;
 
                 m_factory.UpdateSourceCounts();
@@ -223,7 +231,7 @@ namespace DNN.net.dataset.cifar_10
             }
         }
 
-        bool loadFile(Log log, DataConfigSetting s, DatasetFactory factory, int nTotal, ref int nIdx)
+        bool loadFile(Log log, DataConfigSetting s, DatasetFactory factory, int nTotal, bool bCreateMeanImage, ref int nIdx)
         {
             Stopwatch sw = new Stopwatch();
             
@@ -253,6 +261,9 @@ namespace DNN.net.dataset.cifar_10
 
                         factory.PutRawImageCache(nIdx, d);
                         nIdx++;
+
+                        if (bCreateMeanImage)
+                            m_rgImages.Add(new SimpleDatum(d));
 
                         if (sw.ElapsedMilliseconds > 1000)
                         {
