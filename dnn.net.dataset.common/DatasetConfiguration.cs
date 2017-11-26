@@ -43,12 +43,13 @@ namespace DNN.net.dataset.common
     }
 
     [Serializable]
-    public class DatasetConfiguration
+    public class DatasetConfiguration 
     {
         string m_strName = "";
         int m_nID = 0;
         DataConfigSettingCollection m_rgSettings = new DataConfigSettingCollection();
         string m_strSelectedGroup = "";
+        bool m_bReadOnly = false;
 
         public DatasetConfiguration(string strName, int nID, string strSelectedGroup)
         {
@@ -57,12 +58,21 @@ namespace DNN.net.dataset.common
             m_strSelectedGroup = strSelectedGroup;
         }
 
+        [Browsable(false)]
+        public bool IsReadOnly
+        {
+            get { return m_bReadOnly; }
+            set { m_bReadOnly = value; }
+        }
+
+        [ReadOnly(true)]
         public int ID
         {
             get { return m_nID; }
             set { m_nID = value; }
         }
 
+        [ReadOnly(true)]
         public string Name
         {
             get { return m_strName; }
@@ -73,7 +83,7 @@ namespace DNN.net.dataset.common
             get { return m_strSelectedGroup; }
         }
 
-        [TypeConverter(typeof(ExpandableObjectConverter))]
+        [TypeConverter(typeof(ExpandableObjectConverter)), ReadOnly(false)]
         public DataConfigSettingCollection Settings
         {
             get { return m_rgSettings; }
@@ -287,16 +297,14 @@ namespace DNN.net.dataset.common
 
     [Serializable]
     [EditorAttribute(typeof(DataConfigSettingEditor), typeof(System.Drawing.Design.UITypeEditor))]
+    [ReadOnly(false)]
     public class DataConfigSetting
     {
         string m_strName = "";
         object m_objValue = null;
         TYPE m_type = TYPE.TEXT;
-
-        [Browsable(false)]
         string m_strExtra = "";
 
-        [Browsable(false)]
         [NonSerialized]
         IXDatasetCreatorSettings m_iverify = null;
 
@@ -315,7 +323,7 @@ namespace DNN.net.dataset.common
             HELP
         }
 
-        public DataConfigSetting(string strName = "", object objValue = null, TYPE type = TYPE.TEXT, string strExtra = "", IXDatasetCreatorSettings iverify = null)
+        public DataConfigSetting(string strName = "", object objValue = null, TYPE type = TYPE.TEXT, string strExtra = "", IXDatasetCreatorSettings iverify = null) 
         {
             m_strName = strName;
             m_objValue = objValue;
@@ -324,6 +332,7 @@ namespace DNN.net.dataset.common
             m_iverify = iverify;
         }
 
+        [Browsable(false)]
         public IXDatasetCreatorSettings VerifyInterface
         {
             get { return m_iverify; }
@@ -334,11 +343,13 @@ namespace DNN.net.dataset.common
             get { return m_strName; }
         }
 
+        [Browsable(false)]
         public string Extra
         {
             get { return m_strExtra; }
         }
-
+        
+        [ReadOnly(false)]
         public object Value
         {
             get { return m_objValue; }
@@ -569,7 +580,7 @@ namespace DNN.net.dataset.common
             {
                 int nIdx = getIndex(context.PropertyDescriptor.Name);
                 DataConfigSetting[] config = context.Instance as DataConfigSetting[];
-
+                
                 if (config[nIdx].Type == DataConfigSetting.TYPE.FILENAME)
                     return UITypeEditorEditStyle.Modal;
                 if (config[nIdx].Type == DataConfigSetting.TYPE.FILENAME1)
