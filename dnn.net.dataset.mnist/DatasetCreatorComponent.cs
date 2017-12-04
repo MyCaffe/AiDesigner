@@ -50,6 +50,8 @@ namespace DNN.net.dataset.mnist
 
         public void Create(DatasetConfiguration config, IXDatasetCreatorProgress progress)
         {
+            m_bCancel = false;
+
             string strDsName = config.Name;
             string strTrainingSrc = config.Name + ".training";
             string strTestingSrc = config.Name + ".testing";
