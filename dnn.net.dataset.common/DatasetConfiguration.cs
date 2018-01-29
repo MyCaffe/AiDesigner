@@ -19,6 +19,13 @@ namespace DNN.net.dataset.common
         void Create(DatasetConfiguration config, IXDatasetCreatorProgress progress);
     }
 
+    public interface IXDatasetCreatorEx : IXDatasetCreator
+    {
+        Dictionary<string, string> QueryItems(string strItemType, Dictionary<string, string> rgCustomParam, CancelEvent evtCancel);
+        bool UpdateItems(string strItemType, List<int> rgID, List<string> rgParam, List<byte[]> rgData, CancelEvent evtCancel);
+        bool RunWorkPackage(int nWpID, string strType, string strName, string strConfig, Dictionary<string, string> rgWpParam, CancelEvent evtCancel, IXDatasetCreatorProgress progress);
+    }
+
     /// <summary>
     /// Optional interface to view the Debug data or Data Criteria data as an image.
     /// </summary>
