@@ -12,6 +12,9 @@ using MyCaffe.basecode;
 
 namespace DNN.net.dataset.common
 {
+    /// <summary>
+    /// The IXDatasetCreator interface is used by the SignalPop AI Designer to create datasets.
+    /// </summary>
     public interface IXDatasetCreator
     {
         string Name { get; }
@@ -19,6 +22,9 @@ namespace DNN.net.dataset.common
         void Create(DatasetConfiguration config, IXDatasetCreatorProgress progress);
     }
 
+    /// <summary>
+    /// The IXDatasetCreatorEx interface extends the base interface and allows support for custom datasets.
+    /// </summary>
     public interface IXDatasetCreatorEx : IXDatasetCreator
     {
         Dictionary<string, string> QueryItems(string strItemType, Dictionary<string, string> rgCustomParam, CancelEvent evtCancel);
