@@ -45,7 +45,7 @@
     <SignAssembly>true</SignAssembly>
   </PropertyGroup>
   <PropertyGroup>
-    <AssemblyOriginatorKeyFile>caffe.net.dataset.cifar_10.pfx</AssemblyOriginatorKeyFile>
+    <AssemblyOriginatorKeyFile>dnn.net.dataset.cifar_10.pfx</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationIcon>MainIcon.ico</ApplicationIcon>
@@ -87,7 +87,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <None Include="caffe.net.dataset.cifar_10.pfx" />
+    <None Include="dnn.net.dataset.cifar_10.pfx" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
