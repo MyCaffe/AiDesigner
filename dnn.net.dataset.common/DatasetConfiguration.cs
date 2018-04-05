@@ -43,6 +43,14 @@ namespace DNN.net.dataset.common
         Image ViewDataCriteria(byte[] rgData, SimpleDatum.DATA_FORMAT fmt);
     }
 
+    /// <summary>
+    /// Optional interface used to retrieve the recommended label for a given data item.
+    /// </summary>
+    public interface IXDatasetViewer2 : IXDatasetViewer
+    {
+        int GetRecommendedLabel(byte[] rgData, SimpleDatum.DATA_FORMAT fmt);
+    }
+
     public interface IXDatasetCreatorSettings
     {
         void VerifyConfiguration(DataConfigSetting[] settings);
