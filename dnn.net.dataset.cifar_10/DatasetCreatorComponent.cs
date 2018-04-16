@@ -40,24 +40,30 @@ namespace DNN.net.dataset.cifar_10
 
         public void QueryConfiguration(DatasetConfiguration config)
         {
-            string strTrainingBatch1 = "";
-            string strTrainingBatch2 = "";
-            string strTrainingBatch3 = "";
-            string strTrainingBatch4 = "";
-            string strTrainingBatch5 = "";
-            string strTestingBatch = "";
+            string strTrainingBatchFile1 = Properties.Settings.Default.TrainingDataFile1;
+            string strTrainingBatchFile2 = Properties.Settings.Default.TrainingDataFile2;
+            string strTrainingBatchFile3 = Properties.Settings.Default.TrainingDataFile3;
+            string strTrainingBatchFile4 = Properties.Settings.Default.TrainingDataFile4;
+            string strTrainingBatchFile5 = Properties.Settings.Default.TrainingDataFile5;
+            string strTestingBatchFile = Properties.Settings.Default.TestingDataFile;
 
             config.Settings.Add(new DataConfigSetting("Output Dataset Name", "CIFAR-10"));
-            config.Settings.Add(new DataConfigSetting("Training Data File 1", strTrainingBatch1, DataConfigSetting.TYPE.FILENAME, "bin"));
-            config.Settings.Add(new DataConfigSetting("Training Data File 2", strTrainingBatch2, DataConfigSetting.TYPE.FILENAME, "bin"));
-            config.Settings.Add(new DataConfigSetting("Training Data File 3", strTrainingBatch3, DataConfigSetting.TYPE.FILENAME, "bin"));
-            config.Settings.Add(new DataConfigSetting("Training Data File 4", strTrainingBatch4, DataConfigSetting.TYPE.FILENAME, "bin"));
-            config.Settings.Add(new DataConfigSetting("Training Data File 5", strTrainingBatch5, DataConfigSetting.TYPE.FILENAME, "bin"));
-            config.Settings.Add(new DataConfigSetting("Testing Data File", strTestingBatch, DataConfigSetting.TYPE.FILENAME, "bin"));
+            config.Settings.Add(new DataConfigSetting("Training Data File 1", strTrainingBatchFile1, DataConfigSetting.TYPE.FILENAME, "bin"));
+            config.Settings.Add(new DataConfigSetting("Training Data File 2", strTrainingBatchFile2, DataConfigSetting.TYPE.FILENAME, "bin"));
+            config.Settings.Add(new DataConfigSetting("Training Data File 3", strTrainingBatchFile3, DataConfigSetting.TYPE.FILENAME, "bin"));
+            config.Settings.Add(new DataConfigSetting("Training Data File 4", strTrainingBatchFile4, DataConfigSetting.TYPE.FILENAME, "bin"));
+            config.Settings.Add(new DataConfigSetting("Training Data File 5", strTrainingBatchFile5, DataConfigSetting.TYPE.FILENAME, "bin"));
+            config.Settings.Add(new DataConfigSetting("Testing Data File", strTestingBatchFile, DataConfigSetting.TYPE.FILENAME, "bin"));
         }
 
         public void Create(DatasetConfiguration config, IXDatasetCreatorProgress progress)
         {
+            string strTrainingBatchFile1 = Properties.Settings.Default.TrainingDataFile1;
+            string strTrainingBatchFile2 = Properties.Settings.Default.TrainingDataFile2;
+            string strTrainingBatchFile3 = Properties.Settings.Default.TrainingDataFile3;
+            string strTrainingBatchFile4 = Properties.Settings.Default.TrainingDataFile4;
+            string strTrainingBatchFile5 = Properties.Settings.Default.TrainingDataFile5;
+            string strTestingBatchFile = Properties.Settings.Default.TestingDataFile;
             string strDsName = config.Name;
             string strTrainingSrc = config.Name + ".training";
             string strTestingSrc = config.Name + ".testing";
@@ -80,22 +86,28 @@ namespace DNN.net.dataset.cifar_10
                 DataConfigSetting dsTrainingDataFile5 = config.Settings.Find("Training Data File 5");
                 DataConfigSetting dsTestingDataFile = config.Settings.Find("Testing Data File");
 
-                if (dsTrainingDataFile1.Value.ToString().Length == 0)
+                strTrainingBatchFile1 = dsTrainingDataFile1.Value.ToString();
+                if (strTrainingBatchFile1.Length == 0)
                     throw new Exception("Training data file #1 name not specified!");
 
-                if (dsTrainingDataFile2.Value.ToString().Length == 0)
+                strTrainingBatchFile2 = dsTrainingDataFile2.Value.ToString();
+                if (strTrainingBatchFile2.Length == 0)
                     throw new Exception("Training data file #2 name not specified!");
 
-                if (dsTrainingDataFile3.Value.ToString().Length == 0)
+                strTrainingBatchFile3 = dsTrainingDataFile3.Value.ToString();
+                if (strTrainingBatchFile3.Length == 0)
                     throw new Exception("Training data file #3 name not specified!");
 
-                if (dsTrainingDataFile4.Value.ToString().Length == 0)
+                strTrainingBatchFile4 = dsTrainingDataFile4.Value.ToString();
+                if (strTrainingBatchFile4.Length == 0)
                     throw new Exception("Training data file #4 name not specified!");
 
-                if (dsTrainingDataFile5.Value.ToString().Length == 0)
+                strTrainingBatchFile5 = dsTrainingDataFile5.Value.ToString();
+                if (strTrainingBatchFile5.Length == 0)
                     throw new Exception("Training data file #5 name not specified!");
 
-                if (dsTestingDataFile.Value.ToString().Length == 0)
+                strTestingBatchFile = dsTestingDataFile.Value.ToString();
+                if (strTestingBatchFile.Length == 0)
                     throw new Exception("Testing data file name not specified!");
 
                 log.WriteLine("Loading the data files...");
@@ -109,19 +121,19 @@ namespace DNN.net.dataset.cifar_10
                 log.WriteLine("Deleting existing data from '" + m_factory.OpenSource.Name + "'.");
                 m_factory.DeleteSourceData();
 
-                if (!loadFile(log, dsTrainingDataFile1, m_factory, nTotal, true, ref nIdx))
+                if (!loadFile(log, dsTrainingDataFile1.Name, strTrainingBatchFile1, m_factory, nTotal, true, ref nIdx))
                     return;
 
-                if (!loadFile(log, dsTrainingDataFile2, m_factory, nTotal, true, ref nIdx))
+                if (!loadFile(log, dsTrainingDataFile2.Name, strTrainingBatchFile2, m_factory, nTotal, true, ref nIdx))
                     return;
 
-                if (!loadFile(log, dsTrainingDataFile3, m_factory, nTotal, true, ref nIdx))
+                if (!loadFile(log, dsTrainingDataFile3.Name, strTrainingBatchFile3, m_factory, nTotal, true, ref nIdx))
                     return;
 
-                if (!loadFile(log, dsTrainingDataFile4, m_factory, nTotal, true, ref nIdx))
+                if (!loadFile(log, dsTrainingDataFile4.Name, strTrainingBatchFile4, m_factory, nTotal, true, ref nIdx))
                     return;
 
-                if (!loadFile(log, dsTrainingDataFile5, m_factory, nTotal, true, ref nIdx))
+                if (!loadFile(log, dsTrainingDataFile5.Name, strTrainingBatchFile5, m_factory, nTotal, true, ref nIdx))
                     return;
 
                 m_factory.UpdateSourceCounts();
@@ -143,7 +155,7 @@ namespace DNN.net.dataset.cifar_10
                 nIdx = 0;
                 nTotal = 10000;
 
-                if (!loadFile(log, dsTestingDataFile, m_factory, nTotal, false, ref nIdx))
+                if (!loadFile(log, dsTestingDataFile.Name, strTestingBatchFile, m_factory, nTotal, false, ref nIdx))
                     return;
 
                 m_factory.UpdateSourceCounts();
@@ -194,6 +206,14 @@ namespace DNN.net.dataset.cifar_10
             }
             finally
             {
+                Properties.Settings.Default.TrainingDataFile1 = strTrainingBatchFile1;
+                Properties.Settings.Default.TrainingDataFile2 = strTrainingBatchFile2;
+                Properties.Settings.Default.TrainingDataFile3 = strTrainingBatchFile3;
+                Properties.Settings.Default.TrainingDataFile4 = strTrainingBatchFile4;
+                Properties.Settings.Default.TrainingDataFile5 = strTrainingBatchFile5;
+                Properties.Settings.Default.TestingDataFile = strTestingBatchFile;
+                Properties.Settings.Default.Save();
+
                 if (m_bCancel)
                     log.WriteLine("ABORTED converting CIFAR data files.");
                 else
@@ -231,11 +251,11 @@ namespace DNN.net.dataset.cifar_10
             }
         }
 
-        bool loadFile(Log log, DataConfigSetting s, DatasetFactory factory, int nTotal, bool bCreateMeanImage, ref int nIdx)
+        bool loadFile(Log log, string strName, string strFile, DatasetFactory factory, int nTotal, bool bCreateMeanImage, ref int nIdx)
         {
             Stopwatch sw = new Stopwatch();
             
-            log.WriteLine("Loading '" + s.Name + "' into '" + factory.OpenSource.Name + "'...");
+            log.WriteLine("Loading '" + strName + "' into '" + factory.OpenSource.Name + "'...");
 
             sw.Start();
 
@@ -243,7 +263,7 @@ namespace DNN.net.dataset.cifar_10
 
             try
             {
-                fs = new FileStream(s.Value.ToString(), FileMode.Open, FileAccess.Read);
+                fs = new FileStream(strFile, FileMode.Open, FileAccess.Read);
                 using (BinaryReader br = new BinaryReader(fs))
                 {
                     fs = null;
