@@ -9,6 +9,7 @@ using MyCaffe.basecode;
 using MyCaffe.data;
 using System.IO.Compression;
 using System.Threading;
+using System.Drawing;
 
 namespace DNN.net.dataset.mnist
 {
@@ -16,15 +17,23 @@ namespace DNN.net.dataset.mnist
     {
         DatasetFactory m_factory;
         Log m_log;
+        Bitmap m_bmpTargetOverlay = null;
+        Random m_random = null;
 
         public event EventHandler<LoadStartArgs> OnLoadStart;
         public event EventHandler<LoadArgs> OnLoadProgress;
         public event EventHandler<LoadErrorArgs> OnLoadError;
 
-        public MgrMnistData(DatasetFactory factory, Log log, MyCaffeImageDatabase imgDb = null)
+        public MgrMnistData(DatasetFactory factory, Log log, string strTargetFileOverlay, MyCaffeImageDatabase imgDb = null)
         {
             m_factory = factory;
             m_log = log;
+
+            if (!string.IsNullOrEmpty(strTargetFileOverlay) && File.Exists(strTargetFileOverlay))
+            {
+                m_bmpTargetOverlay = new Bitmap(strTargetFileOverlay);
+                m_random = new Random();
+            }
         }
 
         public void Dispose()
@@ -57,6 +66,49 @@ namespace DNN.net.dataset.mnist
             }
 
             return strNewFile;
+        }
+
+        private Datum createTargetOverlay(Datum datum)
+        {
+            int nOffsetMaxX = m_bmpTargetOverlay.Width / datum.Width;
+            int nOffsetMaxY = m_bmpTargetOverlay.Height / datum.Height;
+            int nOffsetX = m_random.Next(nOffsetMaxX) * datum.Width;
+            int nOffsetY = m_random.Next(nOffsetMaxY) * datum.Height;
+
+            Bitmap bmpDst = new Bitmap(datum.Width, datum.Height);
+            LockBitmap bmpD = new LockBitmap(bmpDst);
+            LockBitmap bmpO = new LockBitmap(m_bmpTargetOverlay);
+
+            bmpD.LockBits();
+            bmpO.LockBits();
+
+            for (int y = 0; y < bmpDst.Width; y++)
+            {
+                for (int x = 0; x < bmpDst.Height; x++)
+                {
+                    int nIdx = y * datum.Width + x;
+                    byte bClr = datum.ByteData[nIdx];
+                    Color clrOvl = bmpO.GetPixel(nOffsetX + x, nOffsetY + y);
+
+                    // Invert the color where the data is in the original
+                    // MNIST datum.
+                    if (bClr != 0)
+                    {
+                        int nR = 255 - clrOvl.R;
+                        int nG = 255 - clrOvl.G;
+                        int nB = 255 - clrOvl.R;
+
+                        clrOvl = Color.FromArgb(nR, nG, nB);
+                    }
+
+                    bmpD.SetPixel(x, y, clrOvl);
+                }
+            }
+
+            bmpO.UnlockBits();
+            bmpD.UnlockBits();
+
+            return ImageData.GetImageData(bmpDst, 3, false, datum.Label);
         }
 
         public uint ConvertData(string strImageFile, string strLabelFile, string strDBPath, bool bCreateImgMean, bool bGetItemCountOnly = false, int nChannels = 1)
@@ -155,6 +207,10 @@ namespace DNN.net.dataset.mnist
                     }
 
                     datum.SetData(rgData, (int)rgLabel[0]);
+
+                    if (m_bmpTargetOverlay != null)
+                        datum = createTargetOverlay(datum);
+
                     m_factory.PutRawImageCache(item_id, datum);
 
                     if (bCreateImgMean)
