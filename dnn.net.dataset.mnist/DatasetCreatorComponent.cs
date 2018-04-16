@@ -7,6 +7,7 @@ using System.Text;
 using MyCaffe.imagedb;
 using MyCaffe.basecode;
 using DNN.net.dataset.common;
+using System.IO;
 
 namespace DNN.net.dataset.mnist
 {
@@ -35,29 +36,52 @@ namespace DNN.net.dataset.mnist
 
         public void QueryConfiguration(DatasetConfiguration config)
         {
-            string strTrainingDataFile = "";
-            string strTrainingLabelFile = "";
-            string strTestingDataFile = "";
-            string strTestingLabelFile = "";
+            string strTrainingDataFile = Properties.Settings.Default.TrainingDataFile;
+            string strTrainingLabelFile = Properties.Settings.Default.TrainingLabelFile;
+            string strTestingDataFile = Properties.Settings.Default.TestingDataFile;
+            string strTestingLabelFile = Properties.Settings.Default.TestingLabelFile;
+            string strTargetOverlayFile = Properties.Settings.Default.TargetOverlayFile;
+            int nChannels = Properties.Settings.Default.Channels;
 
             config.Settings.Add(new DataConfigSetting("Output Dataset Name", "MNIST"));
             config.Settings.Add(new DataConfigSetting("Testing Data File", strTestingDataFile, DataConfigSetting.TYPE.FILENAME, "gz"));
             config.Settings.Add(new DataConfigSetting("Testing Label File", strTestingLabelFile, DataConfigSetting.TYPE.FILENAME, "gz"));
             config.Settings.Add(new DataConfigSetting("Training Data File", strTrainingDataFile, DataConfigSetting.TYPE.FILENAME, "gz"));
             config.Settings.Add(new DataConfigSetting("Training Label File", strTrainingLabelFile, DataConfigSetting.TYPE.FILENAME, "gz"));
-            config.Settings.Add(new DataConfigSetting("Channels", "1", DataConfigSetting.TYPE.INTEGER));
+            config.Settings.Add(new DataConfigSetting("Channels", nChannels.ToString(), DataConfigSetting.TYPE.INTEGER));
+            config.Settings.Add(new DataConfigSetting("Target Overlay File", strTargetOverlayFile, DataConfigSetting.TYPE.FILENAME, "jpg"));
         }
 
         public void Create(DatasetConfiguration config, IXDatasetCreatorProgress progress)
         {
+            string strTrainingDataFile = Properties.Settings.Default.TrainingDataFile;
+            string strTrainingLabelFile = Properties.Settings.Default.TrainingLabelFile;
+            string strTestingDataFile = Properties.Settings.Default.TestingDataFile;
+            string strTestingLabelFile = Properties.Settings.Default.TestingLabelFile;
+            string strTargetOverlayFile = Properties.Settings.Default.TargetOverlayFile;
+            int nChannels = Properties.Settings.Default.Channels;
+
             m_bCancel = false;
 
-            string strDsName = config.Name;
-            string strTrainingSrc = config.Name + ".training";
-            string strTestingSrc = config.Name + ".testing";
+            DataConfigSetting dsTargetOverlayFile = config.Settings.Find("Target Overlay File");
+            strTargetOverlayFile = dsTargetOverlayFile.Value.ToString();
+            bool bTargetOutput = false;
+
+            if (!string.IsNullOrEmpty(strTargetOverlayFile) && File.Exists(strTargetOverlayFile))
+                bTargetOutput = true;
+                
+            DataConfigSetting dsName = config.Settings.Find("Output Dataset Name");
+            string strDsName = dsName.Value.ToString();
+
+            if (bTargetOutput)
+                strDsName += "_Target";
+            else
+                strTargetOverlayFile = null;
+
+            string strTrainingSrc = strDsName + ".training";
+            string strTestingSrc = strDsName + ".testing";
 
             DataConfigSetting dsChannels = config.Settings.Find("Channels");
-            int nChannels = 1;
 
             if (int.TryParse(dsChannels.Value.ToString(), out nChannels))
             {
@@ -81,7 +105,7 @@ namespace DNN.net.dataset.mnist
 
             try
             {
-                MgrMnistData mgr = new MgrMnistData(m_factory, log);
+                MgrMnistData mgr = new MgrMnistData(m_factory, log, strTargetOverlayFile);
                 mgr.OnLoadError += new EventHandler<LoadErrorArgs>(mgr_OnLoadError);
                 mgr.OnLoadProgress += new EventHandler<LoadArgs>(mgr_OnLoadProgress);
 
@@ -90,16 +114,20 @@ namespace DNN.net.dataset.mnist
                 DataConfigSetting dsTrainingDataFile = config.Settings.Find("Training Data File");
                 DataConfigSetting dsTrainingLabelFile = config.Settings.Find("Training Label File");
 
-                if (dsTrainingDataFile.Value.ToString().Length == 0)
+                strTrainingDataFile = dsTrainingDataFile.Value.ToString();
+                if (strTrainingDataFile.Length == 0)
                     throw new Exception("Training data file name not specified!");
 
-                if (dsTrainingLabelFile.Value.ToString().Length == 0)
+                strTrainingLabelFile = dsTrainingLabelFile.Value.ToString();
+                if (strTrainingLabelFile.Length == 0)
                     throw new Exception("Training label file name not specified!");
 
-                if (dsTestingDataFile.Value.ToString().Length == 0)
+                strTestingDataFile = dsTestingDataFile.Value.ToString();
+                if (strTestingDataFile.Length == 0)
                     throw new Exception("Testing data file name not specified!");
 
-                if (dsTestingLabelFile.Value.ToString().Length == 0)
+                strTestingLabelFile = dsTestingLabelFile.Value.ToString();
+                if (strTestingLabelFile.Length == 0)
                     throw new Exception("Testing label file name not specified!");
 
                 log.WriteLine("Converting the training data files...");
@@ -107,7 +135,7 @@ namespace DNN.net.dataset.mnist
                 if (m_bCancel)
                     return;
 
-                mgr.ConvertData(dsTrainingDataFile.Value.ToString(), dsTrainingLabelFile.Value.ToString(), strTrainingSrc, true, false, nChannels);
+                mgr.ConvertData(strTrainingDataFile, strTrainingLabelFile, strTrainingSrc, true, false, nChannels);
 
                 if (m_bCancel)
                     return;
@@ -118,7 +146,7 @@ namespace DNN.net.dataset.mnist
                     return;
 
 
-                mgr.ConvertData(dsTestingDataFile.Value.ToString(), dsTestingLabelFile.Value.ToString(), strTestingSrc, false, false, nChannels);
+                mgr.ConvertData(strTestingDataFile, strTestingLabelFile, strTestingSrc, false, false, nChannels);
 
                 if (m_bCancel)
                     return;
@@ -135,7 +163,6 @@ namespace DNN.net.dataset.mnist
                     if (rgSrcTesting.Count == 0)
                         throw new Exception("Could not find the tesing source '" + strTestingSrc + "'.");
 
-                    DataConfigSetting dsName = config.Settings.Find("Output Dataset Name");
                     int nSrcTestingCount = rgSrcTesting[0].ImageCount.GetValueOrDefault();
                     int nSrcTrainingCount = rgSrcTraining[0].ImageCount.GetValueOrDefault();
                     int nSrcTotalCount = nSrcTestingCount + nSrcTrainingCount;
@@ -191,6 +218,14 @@ namespace DNN.net.dataset.mnist
                 {
                     m_iprogress.OnCompleted(new CreateProgressArgs(1, "COMPLETED."));
                 }
+
+                Properties.Settings.Default.TrainingDataFile = strTrainingDataFile;
+                Properties.Settings.Default.TrainingLabelFile = strTrainingLabelFile;
+                Properties.Settings.Default.TestingDataFile = strTestingDataFile;
+                Properties.Settings.Default.TestingLabelFile = strTestingLabelFile;
+                Properties.Settings.Default.Channels = nChannels;
+                Properties.Settings.Default.TargetOverlayFile = strTargetOverlayFile;
+                Properties.Settings.Default.Save();
             }
         }
 
