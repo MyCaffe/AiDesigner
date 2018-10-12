@@ -7,7 +7,7 @@ using System.Text;
 using System.IO;
 using System.Drawing;
 using MyCaffe.basecode;
-using MyCaffe.imagedb;
+using MyCaffe.db.image;
 using MyCaffe.data;
 using DNN.net.dataset.common;
 using System.Threading;

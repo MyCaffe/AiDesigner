@@ -4,7 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using MyCaffe.imagedb;
+using MyCaffe.db.image;
 using MyCaffe.basecode;
 using DNN.net.dataset.common;
 using System.IO;
