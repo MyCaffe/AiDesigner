@@ -1,0 +1,54 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="DNN.net.dataset.csv.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="CsvFile" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="TagCol" Type="System.String" Scope="User">
+      <Value Profile="(Default)">A</Value>
+    </Setting>
+    <Setting Name="DateCol" Type="System.String" Scope="User">
+      <Value Profile="(Default)">B</Value>
+    </Setting>
+    <Setting Name="DataStartCol" Type="System.String" Scope="User">
+      <Value Profile="(Default)">C</Value>
+    </Setting>
+    <Setting Name="DataEndCol" Type="System.String" Scope="User">
+      <Value Profile="(Default)">AK</Value>
+    </Setting>
+    <Setting Name="LabelStartCol" Type="System.String" Scope="User">
+      <Value Profile="(Default)">AL</Value>
+    </Setting>
+    <Setting Name="LabelEndCol" Type="System.String" Scope="User">
+      <Value Profile="(Default)">AQ</Value>
+    </Setting>
+    <Setting Name="ExtraStartCol" Type="System.String" Scope="User">
+      <Value Profile="(Default)">AR</Value>
+    </Setting>
+    <Setting Name="ExtraEndCol" Type="System.String" Scope="User">
+      <Value Profile="(Default)">AS</Value>
+    </Setting>
+    <Setting Name="DataDescRow" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">6</Value>
+    </Setting>
+    <Setting Name="LabelStartRow" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">7</Value>
+    </Setting>
+    <Setting Name="LabelEndRow" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">8</Value>
+    </Setting>
+    <Setting Name="DataStartRow" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">10</Value>
+    </Setting>
+    <Setting Name="UseBinary" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="CellSize" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">5</Value>
+    </Setting>
+    <Setting Name="TestingPct" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">0.2</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>

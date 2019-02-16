@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DNN.net.dataset.cifar_10", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DNN.net.dataset.mnist", "dnn.net.dataset.mnist\DNN.net.dataset.mnist.csproj", "{B3199763-D78C-49B2-A733-86C6E3473742}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DNN.net.dataset.csv", "dnn.net.dataset.csv\DNN.net.dataset.csv.csproj", "{ACBF1744-5539-4187-A30C-4D9C429B1155}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{B3199763-D78C-49B2-A733-86C6E3473742}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B3199763-D78C-49B2-A733-86C6E3473742}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B3199763-D78C-49B2-A733-86C6E3473742}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ACBF1744-5539-4187-A30C-4D9C429B1155}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ACBF1744-5539-4187-A30C-4D9C429B1155}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ACBF1744-5539-4187-A30C-4D9C429B1155}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ACBF1744-5539-4187-A30C-4D9C429B1155}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
