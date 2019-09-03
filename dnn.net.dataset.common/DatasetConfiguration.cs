@@ -48,7 +48,7 @@ namespace DNN.net.dataset.common
     /// </summary>
     public interface IXDatasetViewer2 : IXDatasetViewer
     {
-        int GetRecommendedLabel(byte[] rgData, SimpleDatum.DATA_FORMAT fmt);
+        int GetRecommendedLabel(byte[] rgData, SimpleDatum.DATA_FORMAT fmt, int nSrcID = 0);
         string GetRecommendedLabelName(int nLabel);
     }
 
