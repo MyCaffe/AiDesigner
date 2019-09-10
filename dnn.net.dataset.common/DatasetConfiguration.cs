@@ -18,9 +18,9 @@ namespace DNN.net.dataset.common
     public enum CUSTOM_SETTING
     {
         /// <summary>
-        /// No custom setting specified.
+        /// An unknown custom setting specified.
         /// </summary>
-        NONE,
+        UNKNOWN,
         /// <summary>
         /// Load a set of GPH files.
         /// </summary>
@@ -28,7 +28,11 @@ namespace DNN.net.dataset.common
         /// <summary>
         /// Load the image configuration.
         /// </summary>
-        LOAD_IMAGE_CONFIG
+        LOAD_IMAGE_CONFIG,
+        /// <summary>
+        /// Show a help window.
+        /// </summary>
+        HELP
     }
 
     /// <summary>
@@ -74,7 +78,7 @@ namespace DNN.net.dataset.common
     public interface IXDatasetCreatorSettings
     {
         void VerifyConfiguration(DataConfigSetting[] settings);
-        void GetCustomSetting(string strName, DataConfigSetting[] settings);
+        void GetCustomSetting(string strName, string strCustomSettingType, DataConfigSetting[] settings);
     }
 
     public interface IXDatasetCreatorProgress
@@ -388,6 +392,7 @@ namespace DNN.net.dataset.common
         public string Extra
         {
             get { return m_strExtra; }
+            set { m_strExtra = value; }
         }
         
         [ReadOnly(false)]
@@ -738,7 +743,7 @@ namespace DNN.net.dataset.common
             {
                 if (setting.VerifyInterface != null)
                 {
-                    setting.VerifyInterface.GetCustomSetting(setting.Name, (DataConfigSetting[])context.Instance);
+                    setting.VerifyInterface.GetCustomSetting(setting.Name, setting.Extra, (DataConfigSetting[])context.Instance);
                 }
             }
             else
