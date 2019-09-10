@@ -294,7 +294,7 @@ namespace DNN.net.dataset.cifar_10
                         }
                     }
 
-                    factory.ClearImageCash(true);
+                    factory.ClearImageCashe(true);
                 }
             }
             finally

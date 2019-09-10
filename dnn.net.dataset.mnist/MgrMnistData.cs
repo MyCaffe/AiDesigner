@@ -235,7 +235,7 @@ namespace DNN.net.dataset.mnist
                     }
                 }
 
-                m_factory.ClearImageCash(true);
+                m_factory.ClearImageCashe(true);
                 m_factory.UpdateSourceCounts();
 
                 if (bCreateImgMean)
