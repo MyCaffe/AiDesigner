@@ -13,6 +13,25 @@ using MyCaffe.basecode;
 namespace DNN.net.dataset.common
 {
     /// <summary>
+    /// Defines the type of custom settings to use.
+    /// </summary>
+    public enum CUSTOM_SETTING
+    {
+        /// <summary>
+        /// No custom setting specified.
+        /// </summary>
+        NONE,
+        /// <summary>
+        /// Load a set of GPH files.
+        /// </summary>
+        LOAD_GPH,
+        /// <summary>
+        /// Load the image configuration.
+        /// </summary>
+        LOAD_IMAGE_CONFIG
+    }
+
+    /// <summary>
     /// The IXDatasetCreator interface is used by the SignalPop AI Designer to create datasets.
     /// </summary>
     public interface IXDatasetCreator
