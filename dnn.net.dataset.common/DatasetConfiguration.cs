@@ -84,7 +84,7 @@ namespace DNN.net.dataset.common
     /// </summary>
     public interface IXDataImage
     {
-        Bitmap GetDataImage(object objUserData);
+        Bitmap GetDataImage(int nDatasetID, object objUserData);
     }
 
     public interface IXDatasetCreatorSettings
