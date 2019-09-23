@@ -32,7 +32,11 @@ namespace DNN.net.dataset.common
         /// <summary>
         /// Show a help window.
         /// </summary>
-        HELP
+        HELP,
+        /// <summary>
+        /// Show the help file if exists.
+        /// </summary>
+        HELP_FILE
     }
 
     /// <summary>
@@ -73,6 +77,14 @@ namespace DNN.net.dataset.common
     {
         int GetRecommendedLabel(byte[] rgData, SimpleDatum.DATA_FORMAT fmt, int nSrcID = 0);
         string GetRecommendedLabelName(int nLabel);
+    }
+
+    /// <summary>
+    /// Optional interface used to retrieve an output image based on user supplied input data.
+    /// </summary>
+    public interface IXDataImage
+    {
+        Bitmap GetDataImage(object objUserData);
     }
 
     public interface IXDatasetCreatorSettings
