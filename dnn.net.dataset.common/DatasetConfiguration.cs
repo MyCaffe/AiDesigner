@@ -653,7 +653,7 @@ namespace DNN.net.dataset.common
                 else if (config[nIdx].Type == DataConfigSetting.TYPE.LIST)
                     return UITypeEditorEditStyle.DropDown;
                 else if (config[nIdx].Type == DataConfigSetting.TYPE.DATETIME)
-                    return UITypeEditorEditStyle.DropDown;
+                    return UITypeEditorEditStyle.Modal;
                 else if (config[nIdx].Type == DataConfigSetting.TYPE.INTEGER)
                     return UITypeEditorEditStyle.DropDown;
                 else if (config[nIdx].Type == DataConfigSetting.TYPE.REAL)
@@ -736,22 +736,11 @@ namespace DNN.net.dataset.common
             {
                 if (edSvc != null)
                 {
-                    MonthCalendar calendar = new MonthCalendar();
-                    string strDate = setting.Value.ToString();
-                    DateTime dt = DateTime.Parse(strDate);
+                    DateTime dt = DateTime.Parse(setting.Value.ToString());
 
-                    calendar.ShowTodayCircle = true;
-                    calendar.ShowWeekNumbers = true;
-                    calendar.MaxSelectionCount = 1;
-                    calendar.SelectionStart = dt;
-                    calendar.SelectionEnd = dt;
-
-                    calendar.DateSelected += new DateRangeEventHandler(calendar_DateSelected);
-                    calendar.Tag = edSvc;
-
-                    edSvc.DropDownControl(calendar);
-
-                    setting.Value = calendar.SelectionStart.ToShortDateString();
+                    FormDateTime dlg = new FormDateTime(dt);
+                    if (dlg.ShowDialog() == DialogResult.OK)
+                        setting.Value = dlg.SelectedDateTime.ToString();
                 }
             }
             else if (setting.Type == DataConfigSetting.TYPE.CUSTOM)
