@@ -98,9 +98,8 @@ namespace DNN.net.dataset.voc0712
                 loader.OnError += Loader_OnError;
                 loader.OnCompleted += Loader_OnCompleted;
 
-                loader.LoadDatabase();
-
-
+                if (!loader.LoadDatabase(config.ID))
+                    return;
 
                 using (DNNEntities entities = EntitiesConnection.CreateEntities())
                 {
