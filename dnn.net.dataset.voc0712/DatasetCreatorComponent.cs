@@ -18,6 +18,12 @@ namespace DNN.net.dataset.voc0712
         DatasetFactory m_factory = new DatasetFactory();
         CancelEvent m_evtCancel = new CancelEvent();
 
+        public enum BOOLEAN
+        {
+            False = 0,
+            True = 1
+        }
+
         public DatasetCreatorComponent()
         {
             InitializeComponent();
@@ -35,6 +41,19 @@ namespace DNN.net.dataset.voc0712
             get { return "VOC0712"; }
         }
 
+        private void addList(DatasetConfiguration config, string strName, object objDefault, params object[] rgParam)
+        {
+            OptionItemList rgItems = new OptionItemList();
+
+            foreach (object obj in rgParam)
+            {
+                rgItems.Add(new OptionItem(obj.ToString(), (int)obj, null));
+            }
+
+            OptionItem item = new OptionItem(objDefault.ToString(), (int)objDefault, rgItems);
+            config.Settings.Add(new DataConfigSetting(strName, item, DataConfigSetting.TYPE.LIST));
+        }
+
         public void QueryConfiguration(DatasetConfiguration config)
         {
             string strTrainingFile1 = Properties.Settings.Default.vocTrainingFile1;
@@ -46,12 +65,7 @@ namespace DNN.net.dataset.voc0712
             config.Settings.Add(new DataConfigSetting("Testing Data File 2007", strTestingFile1, DataConfigSetting.TYPE.FILENAME, "tar"));
             config.Settings.Add(new DataConfigSetting("Training Data File 2007", strTrainingFile1, DataConfigSetting.TYPE.FILENAME, "tar"));
             config.Settings.Add(new DataConfigSetting("Training Data File 2012", strTrainingFile2, DataConfigSetting.TYPE.FILENAME, "tar"));
-
-            OptionItemList rgItems = new OptionItemList();
-            rgItems.Add(new OptionItem("False", 0, null));
-            rgItems.Add(new OptionItem("True", 1, null));
-            OptionItem itemList = new OptionItem("True", 1, rgItems);
-            config.Settings.Add(new DataConfigSetting("Extract Data Files", itemList, DataConfigSetting.TYPE.LIST));
+            addList(config, "Extract Data Files", (bExpandFiles) ? BOOLEAN.True : BOOLEAN.False, BOOLEAN.True, BOOLEAN.False);
         }
 
         public void Create(DatasetConfiguration config, IXDatasetCreatorProgress progress)
