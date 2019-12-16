@@ -45,6 +45,7 @@ namespace DNN.net.dataset.common
     public interface IXDatasetCreator
     {
         string Name { get; }
+        IMGDB_VERSION ImageDbVersion { get; set; }
         void QueryConfiguration(DatasetConfiguration config);
         void Create(DatasetConfiguration config, IXDatasetCreatorProgress progress);
     }
@@ -65,9 +66,9 @@ namespace DNN.net.dataset.common
     public interface IXDatasetViewer
     {
         SimpleDatum.DATA_FORMAT[] SupportedDebugDataFormats { get; }
-        Image ViewDebugData(byte[] rgData, SimpleDatum.DATA_FORMAT fmt, int nSrcID = 0, int nDatasetID = 0);
+        Image ViewDebugData(byte[] rgData, SimpleDatum.DATA_FORMAT fmt, out byte[] rgExtra, int nSrcID = 0, int nDatasetID = 0);
         SimpleDatum.DATA_FORMAT[] SupportedDataCriteriaFormats { get; }
-        Image ViewDataCriteria(byte[] rgData, SimpleDatum.DATA_FORMAT fmt, int nSrcID = 0, int nDatasetID = 0);
+        Image ViewDataCriteria(byte[] rgData, SimpleDatum.DATA_FORMAT fmt, out byte[] rgExtra, int nSrcID = 0, int nDatasetID = 0);
     }
 
     /// <summary>

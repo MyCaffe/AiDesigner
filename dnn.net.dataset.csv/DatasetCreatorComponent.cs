@@ -22,6 +22,7 @@ namespace DNN.net.dataset.csv
         List<SimpleDatum> m_rgImages = new List<SimpleDatum>();
         Schema m_schema;
         CsvParser m_parser = new CsvParser();
+        IMGDB_VERSION m_imgDbVer = IMGDB_VERSION.DEFAULT;
 
         public DatasetCreatorComponent()
         {
@@ -38,6 +39,12 @@ namespace DNN.net.dataset.csv
         public string Name
         {
             get { return "CSV"; }
+        }
+
+        public IMGDB_VERSION ImageDbVersion
+        {
+            get { return m_imgDbVer; }
+            set { m_imgDbVer = value; }
         }
 
         public void QueryConfiguration(DatasetConfiguration config)

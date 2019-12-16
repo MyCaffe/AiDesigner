@@ -20,6 +20,7 @@ namespace DNN.net.dataset.cifar_10
         DatasetFactory m_factory = new DatasetFactory();
         bool m_bCancel = false;
         List<SimpleDatum> m_rgImages = new List<SimpleDatum>();
+        IMGDB_VERSION m_imgDbVer = IMGDB_VERSION.DEFAULT;
 
         public DatasetCreatorComponent()
         {
@@ -36,6 +37,12 @@ namespace DNN.net.dataset.cifar_10
         public string Name
         {
             get { return "CIFAR-10"; }
+        }
+
+        public IMGDB_VERSION ImageDbVersion
+        {
+            get { return m_imgDbVer; }
+            set { m_imgDbVer = value; }
         }
 
         public void QueryConfiguration(DatasetConfiguration config)

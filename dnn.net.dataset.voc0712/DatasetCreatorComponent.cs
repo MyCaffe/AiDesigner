@@ -17,6 +17,7 @@ namespace DNN.net.dataset.voc0712
         IXDatasetCreatorProgress m_iprogress = null;
         DatasetFactory m_factory = new DatasetFactory();
         CancelEvent m_evtCancel = new CancelEvent();
+        IMGDB_VERSION m_imgDbVer = IMGDB_VERSION.DEFAULT;
 
         public enum BOOLEAN
         {
@@ -39,6 +40,12 @@ namespace DNN.net.dataset.voc0712
         public string Name
         {
             get { return "VOC0712"; }
+        }
+
+        public IMGDB_VERSION ImageDbVersion
+        {
+            get { return m_imgDbVer; }
+            set { m_imgDbVer = value; }
         }
 
         private void addList(DatasetConfiguration config, string strName, object objDefault, params object[] rgParam)
