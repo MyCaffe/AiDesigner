@@ -284,7 +284,7 @@ namespace DNN.net.dataset.cifar_10
                         if (m_bCancel)
                             return false;
 
-                        Datum d = ImageData.GetImageData(img, 3, false, nLabel);
+                        Datum d = ImageData.GetImageDataD(img, 3, false, nLabel);
 
                         factory.PutRawImageCache(nIdx, d);
                         nIdx++;

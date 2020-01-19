@@ -379,7 +379,7 @@ namespace DNN.net.dataset.csv
                 if (m_bCancel)
                     return false;
 
-                Datum d = ImageData.GetImageData(bmp, rgDim[0], false, nLabel);
+                Datum d = ImageData.GetImageDataD(bmp, rgDim[0], false, nLabel);
                 factory.PutRawImageCache(i, d);
 
                 if (bCreateImageMean)
