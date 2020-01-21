@@ -10,8 +10,8 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("SignalPop LLC")]
 [assembly: AssemblyProduct("SignalPop AI Designer")]
-[assembly: AssemblyCopyright("Copyright © 2017-2019 SignalPop LLC. All rights reserved.")]
-[assembly: AssemblyTrademark("")]
+[assembly: AssemblyCopyright("Copyright © 2017-2020 SignalPop LLC. All rights reserved.")]
+[assembly: AssemblyTrademark("SignalPop")]
 [assembly: AssemblyCulture("")]
 
 // Setting ComVisible to false makes the types in this assembly not visible
@@ -32,5 +32,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("0.10.2.38")]
-[assembly: AssemblyFileVersion("0.10.2.38")]
+[assembly: AssemblyVersion("0.10.2.124")]
+[assembly: AssemblyFileVersion("0.10.2.124")]
