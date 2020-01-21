@@ -80,7 +80,7 @@ namespace DNN.net.dataset.voc0712
             string strTrainingFile1 = Properties.Settings.Default.vocTrainingFile1;
             string strTrainingFile2 = Properties.Settings.Default.vocTrainingFile2;
             string strTestingFile1 = Properties.Settings.Default.vocTestingFile1;
-            bool bExpandFiles = Properties.Settings.Default.ExpandFiles;
+            bool bExtract = Properties.Settings.Default.ExpandFiles;
 
             m_evtCancel.Reset();
 
@@ -95,7 +95,7 @@ namespace DNN.net.dataset.voc0712
 
             DataConfigSetting dsExtract = config.Settings.Find("Extract Data Files");
             OptionItem extractOption = dsExtract.Value as OptionItem;
-            bool bExtract = (extractOption.Index == 0) ? false : true;
+            bExtract = (extractOption.Index == 0) ? false : true;
 
             DataConfigSetting dsName = config.Settings.Find("Output Dataset Name");
             string strDsName = dsName.Value.ToString();
@@ -112,7 +112,7 @@ namespace DNN.net.dataset.voc0712
 
             try
             {
-                VOCDataParameters param = new VOCDataParameters(strTrainingFile1, strTrainingFile2, strTestingFile1, bExpandFiles);
+                VOCDataParameters param = new VOCDataParameters(strTrainingFile1, strTrainingFile2, strTestingFile1, bExtract);
                 VOCDataLoader loader = new VOCDataLoader(param, log, m_evtCancel);
 
                 loader.OnProgress += Loader_OnProgress;
@@ -190,7 +190,7 @@ namespace DNN.net.dataset.voc0712
                 Properties.Settings.Default.vocTestingFile1 = strTestingFile1;
                 Properties.Settings.Default.vocTrainingFile1 = strTrainingFile1;
                 Properties.Settings.Default.vocTrainingFile2 = strTrainingFile2;
-                Properties.Settings.Default.ExpandFiles = bExpandFiles;
+                Properties.Settings.Default.ExpandFiles = bExtract;
                 Properties.Settings.Default.Save();
             }
         }

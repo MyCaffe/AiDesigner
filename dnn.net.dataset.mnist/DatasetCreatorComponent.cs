@@ -142,7 +142,7 @@ namespace DNN.net.dataset.mnist
                 if (m_bCancel)
                     return;
 
-                mgr.ConvertData(strTrainingDataFile, strTrainingLabelFile, strTrainingSrc, true, false, nChannels);
+                mgr.ConvertData(strTrainingDataFile, strTrainingLabelFile, strTrainingSrc, strTrainingSrc, true, false, nChannels);
 
                 if (m_bCancel)
                     return;
@@ -153,7 +153,7 @@ namespace DNN.net.dataset.mnist
                     return;
 
 
-                mgr.ConvertData(strTestingDataFile, strTestingLabelFile, strTestingSrc, false, false, nChannels);
+                mgr.ConvertData(strTestingDataFile, strTestingLabelFile, strTestingSrc, strTrainingSrc, false, false, nChannels);
 
                 if (m_bCancel)
                     return;
@@ -204,7 +204,7 @@ namespace DNN.net.dataset.mnist
                         entities.Datasets.Add(ds);
 
                     entities.SaveChanges();
-                }
+                }               
             }
             catch (Exception excpt)
             {

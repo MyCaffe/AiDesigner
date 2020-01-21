@@ -165,6 +165,8 @@ namespace DNN.net.dataset.cifar_10
                 if (!loadFile(log, dsTestingDataFile.Name, strTestingBatchFile, m_factory, nTotal, false, ref nIdx))
                     return;
 
+                m_factory.CopyImageMean(strTrainingSrc, strTestingSrc);
+
                 m_factory.UpdateSourceCounts();
                 updateLabels(m_factory);
                 m_factory.Close();
