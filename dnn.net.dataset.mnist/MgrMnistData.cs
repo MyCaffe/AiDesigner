@@ -111,7 +111,7 @@ namespace DNN.net.dataset.mnist
             return ImageData.GetImageDataD(bmpDst, 3, false, datum.Label);
         }
 
-        public uint ConvertData(string strImageFile, string strLabelFile, string strDBPath, bool bCreateImgMean, bool bGetItemCountOnly = false, int nChannels = 1)
+        public uint ConvertData(string strImageFile, string strLabelFile, string strDBPath, string strDBPathMean, bool bCreateImgMean, bool bGetItemCountOnly = false, int nChannels = 1)
         {
             string strExt;
             List<SimpleDatum> rgImg = new List<SimpleDatum>();
@@ -181,7 +181,7 @@ namespace DNN.net.dataset.mnist
                 byte[] rgLabel;
                 byte[] rgPixels;
 
-                Datum datum = new Datum(false, nChannels, (int)cols, (int)rows, -1, DateTime.MinValue, (List<double>)null, 0, false, -1);
+                Datum datum = new Datum(false, nChannels, (int)cols, (int)rows);
 
                 if (m_log != null)
                 {
@@ -240,9 +240,16 @@ namespace DNN.net.dataset.mnist
 
                 if (bCreateImgMean)
                 {
-                    m_log.WriteLine("Creating image mean...");
-                    SimpleDatum dMean = SimpleDatum.CalculateMean(m_log, rgImg.ToArray(), new WaitHandle[] { new ManualResetEvent(false) });
-                    m_factory.PutRawImageMean(dMean, true);
+                    if (strDBPath != strDBPathMean)
+                    {
+                        m_factory.CopyImageMean(strDBPathMean, strDBPath);
+                    }
+                    else
+                    {
+                        m_log.WriteLine("Creating image mean...");
+                        SimpleDatum dMean = SimpleDatum.CalculateMean(m_log, rgImg.ToArray(), new WaitHandle[] { new ManualResetEvent(false) });
+                        m_factory.PutRawImageMean(dMean, true);
+                    }
                 }
 
                 if (OnLoadProgress != null)
