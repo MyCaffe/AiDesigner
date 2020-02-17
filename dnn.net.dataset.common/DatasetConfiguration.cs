@@ -85,6 +85,7 @@ namespace DNN.net.dataset.common
     /// </summary>
     public interface IXDataImage
     {
+        byte[] LoadData(int nDatasetID, DateTime dtStart, DateTime dtEnd, Log log = null, Dictionary<string, string> rgParam = null);
         byte[] LoadData(int nDatasetID, DateTime dt, int nCount = -1, Log log = null, Dictionary<string, string> rgParam = null);
         byte[] LoadNext(int nSteps);
         Bitmap GetCurrentImage(out DateTime dt, out bool bBadImage);
