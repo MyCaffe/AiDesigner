@@ -87,8 +87,8 @@ namespace DNN.net.dataset.common
     {
         byte[] LoadData(int nDatasetID, DateTime dtStart, DateTime dtEnd, Log log = null, Dictionary<string, string> rgParam = null);
         byte[] LoadData(int nDatasetID, DateTime dt, int nCount = -1, Log log = null, Dictionary<string, string> rgParam = null);
-        byte[] LoadNext(int nSteps);
-        byte[] LoadNext(DateTime dt);
+        byte[] LoadNext(int nSteps, bool bVerbose);
+        byte[] LoadNext(DateTime dt, bool bVerbose);
         Bitmap GetCurrentImage(out DateTime dt, out bool bBadImage);
         string GetConfigurationSettings();
     }
