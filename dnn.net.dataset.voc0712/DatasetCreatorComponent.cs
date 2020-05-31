@@ -178,12 +178,12 @@ namespace DNN.net.dataset.voc0712
             {
                 if (m_evtCancel.WaitOne(0))
                 {
-                    log.WriteLine("ABORTED converting MNIST data files.");
+                    log.WriteLine("ABORTED converting VOC0712 data files.");
                     m_iprogress.OnCompleted(new CreateProgressArgs(1, "ABORTED!", null, true));
                 }
                 else
                 {
-                    log.WriteLine("Done converting MNIST data files.");
+                    log.WriteLine("Done converting VOC0712 data files.");
                     m_iprogress.OnCompleted(new CreateProgressArgs(1, "COMPLETED."));
                 }
 
