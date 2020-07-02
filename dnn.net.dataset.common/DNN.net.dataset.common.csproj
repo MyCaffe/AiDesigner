@@ -42,6 +42,9 @@
     <Reference Include="MyCaffe.basecode">
       <HintPath>..\_references\MyCaffe.basecode.dll</HintPath>
     </Reference>
+    <Reference Include="SimpleGraphing">
+      <HintPath>..\_references\SimpleGraphing.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />

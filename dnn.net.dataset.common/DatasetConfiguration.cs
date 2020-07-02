@@ -9,6 +9,7 @@ using System.Drawing.Design;
 using System.Windows.Forms.Design;
 using System.Drawing;
 using MyCaffe.basecode;
+using SimpleGraphing;
 
 namespace DNN.net.dataset.common
 {
@@ -91,6 +92,17 @@ namespace DNN.net.dataset.common
         byte[] LoadNext(DateTime dt, bool bVerbose);
         Bitmap GetCurrentImage(out DateTime dt, out bool bBadImage);
         string GetConfigurationSettings();
+    }
+
+    /// <summary>
+    /// Optional interface used to create data images based on user supplied input data.
+    /// </summary>
+    /// <remarks>The image creation used should be the same used by the Dataset Creator when creating the dataset.</remarks>
+    public interface IXDataImageCreator
+    {
+        void Initialize();
+        void CleanUp();
+        Bitmap CreateImage(List<PlotCollectionSet> rgData);
     }
 
     public interface IXDatasetCreatorSettings
