@@ -100,8 +100,8 @@ namespace DNN.net.dataset.common
     /// <remarks>The image creation used should be the same used by the Dataset Creator when creating the dataset.</remarks>
     public interface IXDataImageCreator
     {
-        void Initialize();
-        void CleanUp();
+        void InitializeImageCreator();
+        void CleanUpImageCreator();
         Bitmap CreateImage(List<PlotCollectionSet> rgData);
     }
 
