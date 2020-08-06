@@ -94,17 +94,6 @@ namespace DNN.net.dataset.common
         string GetConfigurationSettings();
     }
 
-    /// <summary>
-    /// Optional interface used to create data images based on user supplied input data.
-    /// </summary>
-    /// <remarks>The image creation used should be the same used by the Dataset Creator when creating the dataset.</remarks>
-    public interface IXDataImageCreator
-    {
-        void InitializeImageCreator();
-        void CleanUpImageCreator();
-        Bitmap CreateImage(List<PlotCollectionSet> rgData);
-    }
-
     public interface IXDatasetCreatorSettings
     {
         void VerifyConfiguration(DataConfigSetting[] settings);
