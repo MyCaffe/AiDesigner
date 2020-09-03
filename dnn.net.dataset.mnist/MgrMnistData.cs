@@ -174,7 +174,7 @@ namespace DNN.net.dataset.mnist
                 uint cols = image_file.ReadUInt32();
 
                 int nSrcId = m_factory.AddSource(strDBPath, nChannels, (int)cols, (int)rows, false, 0, true);
-                m_factory.Open(nSrcId, 500, true); // use file based data.
+                m_factory.Open(nSrcId, 500, Database.FORCE_LOAD.FROM_FILE); // use file based data.
                 m_factory.DeleteSourceData();
 
                 // Storing to db

@@ -157,7 +157,7 @@ namespace DNN.net.dataset.csv
                 int nCellHorizCount = 0;
                 List<int> rgDim = getImageDim(m_parser, m_schema, out nCellHorizCount);
                 int nTrainSrcId = m_factory.AddSource(strTrainingSrc, rgDim[0], rgDim[1], rgDim[2], false, 0);
-                m_factory.Open(nTrainSrcId, 500, true); // use file based data.
+                m_factory.Open(nTrainSrcId, 500, Database.FORCE_LOAD.FROM_FILE); // use file based data.
 
                 log.WriteLine("Deleting existing data from '" + m_factory.OpenSource.Name + "'.");
                 m_factory.DeleteSourceData();
@@ -181,7 +181,7 @@ namespace DNN.net.dataset.csv
                 //-----------------------------------------
 
                 int nTestSrcId = m_factory.AddSource(strTestingSrc, rgDim[0], rgDim[1], rgDim[2], false, 0);
-                m_factory.Open(nTestSrcId, 500, true); // use file based data.
+                m_factory.Open(nTestSrcId, 500, Database.FORCE_LOAD.FROM_FILE); // use file based data.
 
                 log.WriteLine("Deleting existing data from '" + m_factory.OpenSource.Name + "'.");
                 m_factory.DeleteSourceData();
