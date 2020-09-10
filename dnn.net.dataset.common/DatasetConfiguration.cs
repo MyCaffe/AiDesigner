@@ -684,8 +684,28 @@ namespace DNN.net.dataset.common
                 setting.Type == DataConfigSetting.TYPE.FILENAME1)
             {
                 OpenFileDialog dlg = new OpenFileDialog();
+                string[] rgstrExt = setting.Extra.Split(',');
 
-                dlg.Filter = "Data Files (*." + setting.Extra + ")|*." + setting.Extra + "||";
+                string strFilter = "Data Files(";
+                foreach (string strExt in rgstrExt)
+                {
+                    strFilter += "*." + strExt;
+                    strFilter += ", ";
+                }
+
+                strFilter = strFilter.TrimEnd(',', ' ');
+                strFilter += ")|";
+
+                foreach (string strExt in rgstrExt)
+                {
+                    strFilter += "*." + strExt;
+                    strFilter += ";";
+                }
+
+                strFilter = strFilter.TrimEnd(';');
+                strFilter += "||";
+
+                dlg.Filter = strFilter;
                 dlg.Title = "Select the " + setting.Name;
                 dlg.DefaultExt = setting.Extra;
                 dlg.FileName = (string)setting.Value;

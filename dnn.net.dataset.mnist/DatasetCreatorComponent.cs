@@ -56,7 +56,7 @@ namespace DNN.net.dataset.mnist
             config.Settings.Add(new DataConfigSetting("Training Data File", strTrainingDataFile, DataConfigSetting.TYPE.FILENAME, "gz"));
             config.Settings.Add(new DataConfigSetting("Training Label File", strTrainingLabelFile, DataConfigSetting.TYPE.FILENAME, "gz"));
             config.Settings.Add(new DataConfigSetting("Channels", nChannels.ToString(), DataConfigSetting.TYPE.INTEGER));
-            config.Settings.Add(new DataConfigSetting("Target Overlay File", strTargetOverlayFile, DataConfigSetting.TYPE.FILENAME, "jpg"));
+            config.Settings.Add(new DataConfigSetting("Target Overlay File", strTargetOverlayFile, DataConfigSetting.TYPE.FILENAME, "png,jpg,bmp"));
         }
 
         public void Create(DatasetConfiguration config, IXDatasetCreatorProgress progress)
