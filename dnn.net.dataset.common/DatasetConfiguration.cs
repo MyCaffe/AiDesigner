@@ -720,14 +720,10 @@ namespace DNN.net.dataset.common
             }
             else if (setting.Type == DataConfigSetting.TYPE.DIRECTORY)
             {
-                FolderBrowserDialog dlg = new FolderBrowserDialog();
-
-                dlg.RootFolder = Environment.SpecialFolder.MyComputer;
-                dlg.SelectedPath = setting.Value.ToString();
-                dlg.ShowNewFolderButton = true;
+                FormSelectFolder dlg = new FormSelectFolder(setting.Value.ToString());
 
                 if (dlg.ShowDialog() == DialogResult.OK)
-                    setting.Value = dlg.SelectedPath;
+                    setting.Value = dlg.SelectedFolder;
             }
             else if (setting.Type == DataConfigSetting.TYPE.LIST)
             {

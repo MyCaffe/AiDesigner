@@ -66,6 +66,12 @@
     <Compile Include="FormDateTime.Designer.cs">
       <DependentUpon>FormDateTime.cs</DependentUpon>
     </Compile>
+    <Compile Include="FormSelectFolder.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FormSelectFolder.Designer.cs">
+      <DependentUpon>FormSelectFolder.cs</DependentUpon>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -77,6 +83,9 @@
   <ItemGroup>
     <EmbeddedResource Include="FormDateTime.resx">
       <DependentUpon>FormDateTime.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FormSelectFolder.resx">
+      <DependentUpon>FormSelectFolder.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
