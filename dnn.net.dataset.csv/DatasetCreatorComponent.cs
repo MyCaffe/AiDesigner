@@ -391,11 +391,11 @@ namespace DNN.net.dataset.csv
                     log.Progress = (double)i / (double)rgData.Count;
                     log.WriteLine("Processing " + i.ToString() + " of " + rgData.Count.ToString());
                     sw.Restart();
-                    factory.ClearImageCashe(true);
+                    factory.ClearImageCache(true);
                 }
             }
 
-            factory.ClearImageCashe(true);
+            factory.ClearImageCache(true);
 
             return true;
         }

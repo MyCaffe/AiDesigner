@@ -303,7 +303,7 @@ namespace DNN.net.dataset.cifar_10
                         }
                     }
 
-                    factory.ClearImageCashe(true);
+                    factory.ClearImageCache(true);
                 }
             }
             finally
