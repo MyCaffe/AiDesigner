@@ -71,7 +71,7 @@ namespace DNN.net.dataset.common
         SimpleDatum.DATA_FORMAT[] SupportedDataCriteriaFormats { get; }
         Image ViewDataCriteria(byte[] rgData, SimpleDatum.DATA_FORMAT fmt, out byte[] rgExtra, int nSrcID = 0, int nDatasetID = 0, Dictionary<string, double> rgParam = null);
     }
-
+   
     /// <summary>
     /// Optional interface used to retrieve the recommended label for a given data item.
     /// </summary>
