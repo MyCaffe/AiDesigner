@@ -41,16 +41,24 @@ namespace DNN.net.dataset.common
     }
 
     /// <summary>
+    /// The IXDatasetCreatorCuda interface should be implemented by dataset creators that use CUDA.
+    /// </summary>
+    public interface IXDatasetCreatorCuda
+    {
+        void Initialize(string strCuda);
+    }
+
+    /// <summary>
     /// The IXDatasetCreator interface is used by the SignalPop AI Designer to create datasets.
     /// </summary>
     public interface IXDatasetCreator
     {
         string Name { get; }
         IMGDB_VERSION ImageDbVersion { get; set; }
-        void QueryConfiguration(DatasetConfiguration config);
+        void QueryConfiguration(DatasetConfiguration config);        
         void Create(DatasetConfiguration config, IXDatasetCreatorProgress progress);
     }
-
+   
     /// <summary>
     /// The IXDatasetCreatorEx interface extends the base interface and allows support for custom datasets.
     /// </summary>
@@ -59,7 +67,7 @@ namespace DNN.net.dataset.common
         Dictionary<string, string> QueryItems(string strItemType, Dictionary<string, string> rgCustomParam, CancelEvent evtCancel);
         bool UpdateItems(string strItemType, List<int> rgID, List<string> rgParam, List<byte[]> rgData, CancelEvent evtCancel);
         bool RunWorkPackage(int nWpID, string strType, string strName, string strConfig, Dictionary<string, string> rgWpParam, CancelEvent evtCancel, IXDatasetCreatorProgress progress);
-    }
+    } 
 
     /// <summary>
     /// Optional interface to view the Debug data or Data Criteria data as an image.
