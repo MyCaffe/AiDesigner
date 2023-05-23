@@ -267,7 +267,7 @@ namespace DNN.net.dataset.tft.electricity
                     tw.WriteStartElement("Field");
                         tw.WriteAttributeString("Index", "2");
                         tw.WriteAttributeString("DateType", "REAL");
-                        tw.WriteAttributeString("InputType", "OBSERVED");
+                        tw.WriteAttributeString("InputType", "TARGET");
                         tw.WriteValue("log power usage");
                     tw.WriteEndElement();
                 tw.WriteEndElement();
