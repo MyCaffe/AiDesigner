@@ -31,6 +31,16 @@ namespace DNN.net.dataset.tft.electricity
             m_evtCancel = evtCancel;
         }
 
+        public ElectricityData SplitData(double dfPctStart, double dfPctEnd)
+        {
+            ElectricityData data = new ElectricityData(null, m_log, m_evtCancel);
+
+            data.m_rgCustomers = m_rgCustomers;
+            data.m_data = m_data.Split(dfPctStart, dfPctEnd);
+
+            return data;
+        }
+
         public bool LoadData(DateTime dtStart, DateTime dtEnd)
         {
             m_data.StartTime = DateTime.MinValue;
@@ -116,28 +126,33 @@ namespace DNN.net.dataset.tft.electricity
             return m_data.Normalize(m_sw, m_log, m_evtCancel);
         }
 
-        public bool SaveAsNumpy(string strPath)
+        public bool SaveAsNumpy(string strPath, string strSub)
         {
+            string strPath1 = strPath + "\\preprocessed";
+
+            if (!Directory.Exists(strPath1))
+                Directory.CreateDirectory(strPath1);
+
             m_log.WriteLine("Saving observed numeric data to numpy files...");
-            if (!saveObservedNumericFile(strPath))
+            if (!saveObservedNumericFile(strPath1, strSub))
                 return false;
 
             m_log.WriteLine("Saving known numeric data to numpy files...");
-            if (!saveKnownNumericFile(strPath))
+            if (!saveKnownNumericFile(strPath1, strSub))
                 return false;
 
             m_log.WriteLine("Saving static categorical data to numpy files...");
-            if (!saveStaticCategoricalFile(strPath))
+            if (!saveStaticCategoricalFile(strPath1, strSub))
                 return false;
 
             m_log.WriteLine("Saving schema file...");
-            if (!saveSchemaFile(strPath))
+            if (!saveSchemaFile(strPath1, strSub))
                 return false;
 
             return false;
         }
 
-        private bool saveObservedNumericFile(string strPath)
+        private bool saveObservedNumericFile(string strPath, string strSub)
         {
             int nCustomers = m_rgCustomers.Count;
             int nRecords = m_data.RecordsPerCustomer;
@@ -162,11 +177,11 @@ namespace DNN.net.dataset.tft.electricity
                 nIdxCustomer++;
             }
 
-            Blob<float>.SaveToNumpy(strPath + "\\observed_num.npy", rgData, new int[] { nCustomers, nFields, nRecords });
+            Blob<float>.SaveToNumpy(strPath + "\\" + strSub + "_observed_num.npy", rgData, new int[] { nCustomers, nFields, nRecords });
             return true;
         }
 
-        private bool saveKnownNumericFile(string strPath)
+        private bool saveKnownNumericFile(string strPath, string strSub)
         {
             int nCustomers = m_rgCustomers.Count;
             int nRecords = m_data.RecordsPerCustomer;
@@ -195,11 +210,11 @@ namespace DNN.net.dataset.tft.electricity
                 nIdxCustomer++;
             }
 
-            Blob<float>.SaveToNumpy(strPath + "\\known_num.npy", rgData, new int[] { nCustomers, nFields, nRecords });
+            Blob<float>.SaveToNumpy(strPath + "\\" + strSub + "_known_num.npy", rgData, new int[] { nCustomers, nFields, nRecords });
             return true;
         }
 
-        private bool saveStaticCategoricalFile(string strPath)
+        private bool saveStaticCategoricalFile(string strPath, string strSub)
         {
             int nCustomers = m_rgCustomers.Count;
             int nRecords = m_data.RecordsPerCustomer;
@@ -225,127 +240,148 @@ namespace DNN.net.dataset.tft.electricity
                 nIdxCustomer++;
             }
 
-            Blob<float>.SaveToNumpy(strPath + "\\static_cat.npy", rgData, new int[] { nCustomers, nFields, nRecords });
+            Blob<float>.SaveToNumpy(strPath + "\\" + strSub + "_static_cat.npy", rgData, new int[] { nCustomers, nFields, nRecords });
             return true;
         }
 
-        private bool saveSchemaFile(string strPath)
+        private void saveObserved(XmlTextWriter tw)
         {
-            using (XmlTextWriter tw = new XmlTextWriter(strPath + "\\schema.xml", null))
+            tw.WriteStartElement("Observed");
+                tw.WriteStartElement("Numeric");
+                    tw.WriteElementString("File", "observed_num.npy");
+                    
+                    tw.WriteStartElement("Field");
+                        tw.WriteAttributeString("Index", "0");
+                        tw.WriteAttributeString("DateType", "REAL");
+                        tw.WriteAttributeString("InputType", "TIME");
+                        tw.WriteValue("time");
+                    tw.WriteEndElement();
+
+                    tw.WriteStartElement("Field");
+                        tw.WriteAttributeString("Index", "1");
+                        tw.WriteAttributeString("DateType", "REAL");
+                        tw.WriteAttributeString("InputType", "ID");
+                        tw.WriteValue("customer id");
+                    tw.WriteEndElement();
+
+                    tw.WriteStartElement("Field");
+                        tw.WriteAttributeString("Index", "2");
+                        tw.WriteAttributeString("DateType", "REAL");
+                        tw.WriteAttributeString("InputType", "OBSERVED");
+                        tw.WriteValue("log power usage");
+                    tw.WriteEndElement();
+                tw.WriteEndElement();
+
+                tw.WriteStartElement("Categorical");
+                tw.WriteEndElement();
+            tw.WriteEndElement();
+        }
+
+        private void saveKnown(XmlTextWriter tw)
+        {
+            tw.WriteStartElement("Known");
+                tw.WriteStartElement("Numeric");
+                    tw.WriteElementString("File", "known_num.npy");
+                    
+                    tw.WriteStartElement("Field");
+                        tw.WriteAttributeString("Index", "0");
+                        tw.WriteAttributeString("DateType", "REAL");
+                        tw.WriteAttributeString("InputType", "TIME");
+                        tw.WriteValue("time");
+                    tw.WriteEndElement();
+
+                    tw.WriteStartElement("Field");
+                        tw.WriteAttributeString("Index", "1");
+                        tw.WriteAttributeString("DateType", "REAL");
+                        tw.WriteAttributeString("InputType", "ID");
+                        tw.WriteValue("customer id");
+                    tw.WriteEndElement();
+
+                    tw.WriteStartElement("Field");
+                        tw.WriteAttributeString("Index", "2");
+                        tw.WriteAttributeString("DateType", "REAL");
+                        tw.WriteAttributeString("InputType", "KNOWN");
+                        tw.WriteAttributeString("DerivedFrom", "TIME:0");
+                        tw.WriteAttributeString("Calculation", "HR");
+                        tw.WriteValue("hour");
+                    tw.WriteEndElement();
+
+                    tw.WriteStartElement("Field");
+                        tw.WriteAttributeString("Index", "3");
+                        tw.WriteAttributeString("DateType", "REAL");
+                        tw.WriteAttributeString("InputType", "KNOWN");
+                        tw.WriteAttributeString("DerivedFrom", "TIME:0");
+                        tw.WriteAttributeString("Calculation", "HRFS");
+                        tw.WriteValue("hour from start");
+                    tw.WriteEndElement();
+                tw.WriteEndElement();
+
+                tw.WriteStartElement("Categorical");
+                tw.WriteEndElement();
+            tw.WriteEndElement();
+        }
+
+        private void saveStatic(XmlTextWriter tw)
+        {
+            tw.WriteStartElement("Static");
+                tw.WriteStartElement("Numeric");
+                    tw.WriteElementString("File", "static_num.npy");
+
+                    tw.WriteStartElement("Field");
+                        tw.WriteAttributeString("Index", "0");
+                        tw.WriteAttributeString("DateType", "REAL");
+                        tw.WriteAttributeString("InputType", "TIME");
+                        tw.WriteValue("time");
+                    tw.WriteEndElement();
+
+                    tw.WriteStartElement("Field");
+                        tw.WriteAttributeString("Index", "1");
+                        tw.WriteAttributeString("DateType", "REAL");
+                        tw.WriteAttributeString("InputType", "STATIC");
+                        tw.WriteValue("customer id");
+                    tw.WriteEndElement();
+                tw.WriteEndElement();
+
+                tw.WriteStartElement("Categorical");
+                tw.WriteEndElement();
+            tw.WriteEndElement();
+        }
+
+        private void saveLoookups(XmlTextWriter tw)
+        {
+            tw.WriteStartElement("Lookup");
+                tw.WriteAttributeString("Name", "customer id");
+                tw.WriteAttributeString("Type", "Categorical");
+
+                foreach (KeyValuePair<int, string> kv in m_rgCustomers)
+                {
+                    tw.WriteStartElement("Item");
+                        tw.WriteAttributeString("Index", kv.Key.ToString());
+                        tw.WriteAttributeString("ValidRangeStartIdx", m_data.ValidRangeByCustomer[kv.Key].Item1.ToString());
+                        tw.WriteAttributeString("ValidRangeEndIdx", m_data.ValidRangeByCustomer[kv.Key].Item2.ToString());
+                        tw.WriteValue(kv.Value);
+                    tw.WriteEndElement();
+                }
+
+            tw.WriteEndElement();
+        }
+
+        private bool saveSchemaFile(string strPath, string strSub)
+        {
+            using (XmlTextWriter tw = new XmlTextWriter(strPath + "\\electricity_" + strSub + "_schema.xml", null))
             {
                 tw.WriteStartDocument();
-                    tw.WriteStartElement("Data");
-
-                        tw.WriteStartElement("Observed");
-                            tw.WriteStartElement("Numeric");
-                                tw.WriteElementString("File", "observed_num.npy");
-                                tw.WriteStartElement("Field");
-                                    tw.WriteAttributeString("Index", "0");
-                                    tw.WriteAttributeString("DateType", "REAL");
-                                    tw.WriteAttributeString("InputType", "TIME");
-                                    tw.WriteValue("time");
-                                tw.WriteEndElement();
-
-                                tw.WriteStartElement("Field");
-                                    tw.WriteAttributeString("Index", "1");
-                                    tw.WriteAttributeString("DateType", "REAL");
-                                    tw.WriteAttributeString("InputType", "ID");
-                                    tw.WriteValue("customer id");
-                                tw.WriteEndElement();
-
-                                tw.WriteStartElement("Field");
-                                    tw.WriteAttributeString("Index", "2");
-                                    tw.WriteAttributeString("DateType", "REAL");
-                                    tw.WriteAttributeString("InputType", "OBSERVED");
-                                    tw.WriteValue("log power usage");
-                                tw.WriteEndElement();
-                            tw.WriteEndElement();
-
-                            tw.WriteStartElement("Categorical");
-                            tw.WriteEndElement();
-
-                        tw.WriteStartElement("Known");
-                            tw.WriteStartElement("Numeric");
-                                tw.WriteElementString("File", "known_num.npy");
-                                tw.WriteStartElement("Field");
-                                    tw.WriteAttributeString("Index", "0");
-                                    tw.WriteAttributeString("DateType", "REAL");
-                                    tw.WriteAttributeString("InputType", "TIME");
-                                    tw.WriteValue("time");
-                                tw.WriteEndElement();
-
-                                tw.WriteStartElement("Field");
-                                    tw.WriteAttributeString("Index", "1");
-                                    tw.WriteAttributeString("DateType", "REAL");
-                                    tw.WriteAttributeString("InputType", "ID");
-                                    tw.WriteValue("customer id");
-                                tw.WriteEndElement();
-
-                                tw.WriteStartElement("Field");
-                                    tw.WriteAttributeString("Index", "2");
-                                    tw.WriteAttributeString("DateType", "REAL");
-                                    tw.WriteAttributeString("InputType", "KNOWN");
-                                    tw.WriteAttributeString("DerivedFrom", "TIME:0");
-                                    tw.WriteAttributeString("Calculation", "HR");
-                                    tw.WriteValue("hour");
-                                tw.WriteEndElement();
-
-                                tw.WriteStartElement("Field");
-                                    tw.WriteAttributeString("Index", "3");
-                                    tw.WriteAttributeString("DateType", "REAL");
-                                    tw.WriteAttributeString("InputType", "KNOWN");
-                                    tw.WriteAttributeString("DerivedFrom", "TIME:0");
-                                    tw.WriteAttributeString("Calculation", "HRFS");
-                                    tw.WriteValue("hour from start");
-                                tw.WriteEndElement();
-                            tw.WriteEndElement();
-
-                            tw.WriteStartElement("Categorical");
-                            tw.WriteEndElement();
-                        tw.WriteEndElement();
-    
-                    tw.WriteStartElement("Static");
-                        tw.WriteStartElement("Numeric");
-                            tw.WriteElementString("File", "static_num.npy");
-
-                            tw.WriteStartElement("Field");
-                                tw.WriteAttributeString("Index", "0");
-                                tw.WriteAttributeString("DateType", "REAL");
-                                tw.WriteAttributeString("InputType", "TIME");
-                                tw.WriteValue("time");
-                            tw.WriteEndElement();
-
-                            tw.WriteStartElement("Field");
-                                tw.WriteAttributeString("Index", "1");
-                                tw.WriteAttributeString("DateType", "REAL");
-                                tw.WriteAttributeString("InputType", "STATIC");
-                                tw.WriteValue("customer id");
-                            tw.WriteEndElement();
+                    tw.WriteStartElement("Schema");
+                        tw.WriteStartElement("Data");
+                            saveObserved(tw);
+                            saveKnown(tw);
+                            saveStatic(tw);
                         tw.WriteEndElement();
 
-                        tw.WriteStartElement("Categorical");
+                        tw.WriteStartElement("Lookups");
+                            saveLoookups(tw);
                         tw.WriteEndElement();
-
                     tw.WriteEndElement();
-                tw.WriteEndElement();
-
-                tw.WriteStartElement("Lookups");
-                    tw.WriteStartElement("Lookup");
-                    tw.WriteAttributeString("Name", "customer id");
-                    tw.WriteAttributeString("Type", "Categorical");
-
-                    foreach (KeyValuePair<int, string> kv in m_rgCustomers)
-                    {
-                        tw.WriteStartElement("Item");
-                            tw.WriteAttributeString("Index", kv.Key.ToString());
-                            tw.WriteAttributeString("ValidRangeStartIdx", m_data.ValidRangeByCustomer[kv.Key].Item1.ToString());
-                            tw.WriteAttributeString("ValidRangeEndIdx", m_data.ValidRangeByCustomer[kv.Key].Item2.ToString());    
-                            tw.WriteValue(kv.Value);
-                        tw.WriteEndElement();
-                    }
-
-                    tw.WriteEndElement();
-                tw.WriteEndElement();
                 tw.WriteEndDocument();
             }
 
@@ -428,6 +464,37 @@ namespace DNN.net.dataset.tft.electricity
 
         public DataTable()
         {
+        }
+
+        public DataTable Split(double dfPctStart, double dfPctEnd)
+        {
+            DataTable dt = new DataTable();
+            foreach (KeyValuePair<int, List<DataRecord>> kv in m_rgRecordsByCustomer)
+            {
+                int nStartIdx = (int)(kv.Value.Count * dfPctStart);
+                int nEndIdx = (int)(kv.Value.Count * dfPctEnd);
+                int nValidStartIdx = -1;
+                int nValidEndIDx = -1;
+
+                for (int i = nStartIdx; i < nEndIdx; i++)
+                {
+                    DataRecord rec = kv.Value[i];
+
+                    if (rec.IsValid)
+                    {
+                        if (nValidStartIdx < 0)
+                            nValidStartIdx = i - nStartIdx;
+                        nValidEndIDx = i - nStartIdx;
+                    }
+
+                    dt.Add(rec);
+                }
+
+                dt.m_rgValidRangeByCustomer.Remove(kv.Key);
+                dt.m_rgValidRangeByCustomer.Add(kv.Key, new Tuple<int, int>(nValidStartIdx, nValidEndIDx));
+            }
+
+            return dt;
         }
 
         public void Add(DataRecord rec)

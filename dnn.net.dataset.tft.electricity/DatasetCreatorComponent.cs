@@ -81,6 +81,9 @@ namespace DNN.net.dataset.tft.electricity
             config.Settings.Add(new DataConfigSetting("Output Path", strOutputPath, DataConfigSetting.TYPE.DIRECTORY));
             config.Settings.Add(new DataConfigSetting("Start Date", dtStart, DataConfigSetting.TYPE.DATETIME));
             config.Settings.Add(new DataConfigSetting("End Date", dtEnd, DataConfigSetting.TYPE.DATETIME));
+            config.Settings.Add(new DataConfigSetting("Train Split", Properties.Settings.Default.TrainingSplitPct, DataConfigSetting.TYPE.REAL));
+            config.Settings.Add(new DataConfigSetting("Test Split", Properties.Settings.Default.TestingSplitPct, DataConfigSetting.TYPE.REAL));
+            config.Settings.Add(new DataConfigSetting("Validation Split", Properties.Settings.Default.ValidSplitPct, DataConfigSetting.TYPE.REAL));
             addList(config, "Output Format", outType, OUTPUT_TYPE.CSV, OUTPUT_TYPE.NPY);
         }
 
@@ -97,6 +100,10 @@ namespace DNN.net.dataset.tft.electricity
             strOutputPath = config.Settings.Find("Output Path").Value.ToString();
             dtStart = (DateTime)config.Settings.Find("Start Date").Value;
             dtEnd = (DateTime)config.Settings.Find("End Date").Value;
+            double dfTrainSplit = (double)config.Settings.Find("Train Split").Value;
+            double dfTestSplit = (double)config.Settings.Find("Test Split").Value;
+            double dfValSplit = (double)config.Settings.Find("Validation Split").Value;
+
 
             DataConfigSetting ds = config.Settings.Find("Output Format");
             OptionItem opt = ds.Value as OptionItem;
@@ -121,8 +128,16 @@ namespace DNN.net.dataset.tft.electricity
 
                 if (data.LoadData(dtStart, dtEnd))
                 {
+                    ElectricityData dataTrain = data.SplitData(0, dfTrainSplit);
+                    ElectricityData dataTest = data.SplitData(dfTrainSplit, dfTrainSplit + dfTestSplit);
+                    ElectricityData dataVal = data.SplitData(dfTrainSplit + dfTestSplit, 1);
+
                     if (outType == OUTPUT_TYPE.NPY)
-                        data.SaveAsNumpy(strOutputPath);
+                    {
+                        dataTrain.SaveAsNumpy(strOutputPath, "train");
+                        dataTest.SaveAsNumpy(strOutputPath, "test");
+                        dataVal.SaveAsNumpy(strOutputPath, "validation");
+                    }
                     else
                         throw new Exception("Unknown output type '" + outType.ToString() + "'.");
                 }
@@ -149,6 +164,9 @@ namespace DNN.net.dataset.tft.electricity
                 Properties.Settings.Default.StartDate = dtStart.ToString();
                 Properties.Settings.Default.EndDate = dtEnd.ToString();
                 Properties.Settings.Default.OutputType = (int)outType;
+                Properties.Settings.Default.TrainingSplitPct = dfTrainSplit;
+                Properties.Settings.Default.TestingSplitPct = dfTestSplit;
+                Properties.Settings.Default.ValidSplitPct = dfValSplit;
                 Properties.Settings.Default.Save();
             }
         }
