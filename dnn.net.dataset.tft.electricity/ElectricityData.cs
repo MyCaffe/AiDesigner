@@ -133,6 +133,10 @@ namespace DNN.net.dataset.tft.electricity
             if (!Directory.Exists(strPath1))
                 Directory.CreateDirectory(strPath1);
 
+            m_log.WriteLine("Saving sync data to numpy files...");
+            if (!saveSyncFile(strPath1, strSub))
+                return false;
+
             m_log.WriteLine("Saving observed numeric data to numpy files...");
             if (!saveObservedNumericFile(strPath1, strSub))
                 return false;
@@ -152,11 +156,38 @@ namespace DNN.net.dataset.tft.electricity
             return false;
         }
 
+        private bool saveSyncFile(string strPath, string strSub)
+        {
+            int nCustomers = m_rgCustomers.Count;
+            int nRecords = m_data.RecordsPerCustomer;
+            int nFields = 2;
+            long[] rgData = new long[nCustomers * nRecords * nFields];
+            long[] rgCustomer = new long[nRecords * nFields];
+            int nIdxCustomer = 0;
+
+            foreach (KeyValuePair<int, List<DataRecord>> kv in m_data.RecordsByCustomer)
+            {
+                int nIdx = 0;
+
+                foreach (DataRecord rec in kv.Value)
+                {
+                    rgCustomer[nIdx++] = ((DateTimeOffset)rec.Date).ToUnixTimeSeconds();
+                    rgCustomer[nIdx++] = rec.CustomerID;
+                }
+
+                Array.Copy(rgCustomer, 0, rgData, rgCustomer.Length * nIdxCustomer, rgCustomer.Length);
+                nIdxCustomer++;
+            }
+
+            Blob<float>.SaveToNumpy(strPath + "\\" + strSub + "_sync.npy", rgData, new int[] { nCustomers, nRecords, nFields });
+            return true;
+        }
+
         private bool saveObservedNumericFile(string strPath, string strSub)
         {
             int nCustomers = m_rgCustomers.Count;
             int nRecords = m_data.RecordsPerCustomer;
-            int nFields = 3;
+            int nFields = 1;
             float[] rgData = new float[nCustomers * nRecords * nFields];
             float[] rgCustomer = new float[nRecords * nFields];
             int nIdxCustomer = 0;
@@ -167,54 +198,18 @@ namespace DNN.net.dataset.tft.electricity
 
                 foreach (DataRecord rec in kv.Value)
                 {
-                    rgData[nIdx] = ((DateTimeOffset)rec.Date).ToUnixTimeSeconds();
-                    rgData[nIdx + nRecords] = rec.CustomerID;
-                    rgData[nIdx + nRecords * 2] = (float)rec.NormalizedPowerUsage;
-                    nIdx++;
+                    rgCustomer[nIdx++] = (float)rec.NormalizedPowerUsage;
                 }
 
                 Array.Copy(rgCustomer, 0, rgData, rgCustomer.Length * nIdxCustomer, rgCustomer.Length);
                 nIdxCustomer++;
             }
 
-            Blob<float>.SaveToNumpy(strPath + "\\" + strSub + "_observed_num.npy", rgData, new int[] { nCustomers, nFields, nRecords });
+            Blob<float>.SaveToNumpy(strPath + "\\" + strSub + "_observed_num.npy", rgData, new int[] { nCustomers, nRecords, nFields });
             return true;
         }
 
         private bool saveKnownNumericFile(string strPath, string strSub)
-        {
-            int nCustomers = m_rgCustomers.Count;
-            int nRecords = m_data.RecordsPerCustomer;
-            int nFields = 4;
-            DateTime dtStart = m_data.StartTime;
-            float[] rgData = new float[nCustomers * nRecords * nFields];
-            float[] rgCustomer = new float[nRecords * nFields];
-            int nIdxCustomer = 0;
-
-            foreach (KeyValuePair<int, List<DataRecord>> kv in m_data.RecordsByCustomer)
-            {
-                int nIdx = 0;
-
-                foreach (DataRecord rec in kv.Value)
-                {
-                    TimeSpan ts = rec.Date - dtStart;
-
-                    rgData[nIdx] = ((DateTimeOffset)rec.Date).ToUnixTimeSeconds();
-                    rgData[nIdx + nRecords] = rec.CustomerID;
-                    rgData[nIdx + nRecords * 2] = rec.Date.Hour;
-                    rgData[nIdx + nRecords * 3] = (float)ts.TotalHours;
-                    nIdx++;
-                }
-
-                Array.Copy(rgCustomer, 0, rgData, rgCustomer.Length * nIdxCustomer, rgCustomer.Length);
-                nIdxCustomer++;
-            }
-
-            Blob<float>.SaveToNumpy(strPath + "\\" + strSub + "_known_num.npy", rgData, new int[] { nCustomers, nFields, nRecords });
-            return true;
-        }
-
-        private bool saveStaticCategoricalFile(string strPath, string strSub)
         {
             int nCustomers = m_rgCustomers.Count;
             int nRecords = m_data.RecordsPerCustomer;
@@ -232,16 +227,54 @@ namespace DNN.net.dataset.tft.electricity
                 {
                     TimeSpan ts = rec.Date - dtStart;
 
-                    rgData[nIdx] = ((DateTimeOffset)rec.Date).ToUnixTimeSeconds();
-                    rgData[nIdx + nRecords] = rec.CustomerID;
+                    rgCustomer[nIdx++] = rec.Date.Hour;
+                    rgCustomer[nIdx++] = (float)ts.TotalHours;
                 }
 
                 Array.Copy(rgCustomer, 0, rgData, rgCustomer.Length * nIdxCustomer, rgCustomer.Length);
                 nIdxCustomer++;
             }
 
-            Blob<float>.SaveToNumpy(strPath + "\\" + strSub + "_static_cat.npy", rgData, new int[] { nCustomers, nFields, nRecords });
+            Blob<float>.SaveToNumpy(strPath + "\\" + strSub + "_known_num.npy", rgData, new int[] { nCustomers, nRecords, nFields });
             return true;
+        }
+
+        private bool saveStaticCategoricalFile(string strPath, string strSub)
+        {
+            int nCustomers = m_rgCustomers.Count;
+            int nFields = 1;
+            long[] rgData = new long[nCustomers * nFields];
+            int nIdxCustomer = 0;
+
+            foreach (KeyValuePair<int, List<DataRecord>> kv in m_data.RecordsByCustomer)
+            {
+                rgData[nIdxCustomer] = kv.Value[0].CustomerID;
+                nIdxCustomer++;
+            }
+
+            Blob<float>.SaveToNumpy(strPath + "\\" + strSub + "_static_cat.npy", rgData, new int[] { nCustomers, nFields });
+            return true;
+        }
+
+        private void saveSync(XmlTextWriter tw)
+        {
+            tw.WriteStartElement("Sync");
+                tw.WriteElementString("File", "sync.npy");
+
+                tw.WriteStartElement("Field");
+                    tw.WriteAttributeString("Index", "0");
+                    tw.WriteAttributeString("DataType", "REAL");
+                    tw.WriteAttributeString("InputType", "TIME");
+                    tw.WriteValue("time");
+                tw.WriteEndElement();
+
+                tw.WriteStartElement("Field");
+                    tw.WriteAttributeString("Index", "1");
+                    tw.WriteAttributeString("DataType", "REAL");
+                    tw.WriteAttributeString("InputType", "ID");
+                    tw.WriteValue("customer id");
+                tw.WriteEndElement();
+            tw.WriteEndElement();
         }
 
         private void saveObserved(XmlTextWriter tw)
@@ -251,23 +284,9 @@ namespace DNN.net.dataset.tft.electricity
                     tw.WriteElementString("File", "observed_num.npy");
                     
                     tw.WriteStartElement("Field");
-                        tw.WriteAttributeString("Index", "0");
-                        tw.WriteAttributeString("DateType", "REAL");
-                        tw.WriteAttributeString("InputType", "TIME");
-                        tw.WriteValue("time");
-                    tw.WriteEndElement();
-
-                    tw.WriteStartElement("Field");
-                        tw.WriteAttributeString("Index", "1");
-                        tw.WriteAttributeString("DateType", "REAL");
-                        tw.WriteAttributeString("InputType", "ID");
-                        tw.WriteValue("customer id");
-                    tw.WriteEndElement();
-
-                    tw.WriteStartElement("Field");
                         tw.WriteAttributeString("Index", "2");
-                        tw.WriteAttributeString("DateType", "REAL");
-                        tw.WriteAttributeString("InputType", "TARGET");
+                        tw.WriteAttributeString("DataType", "REAL");
+                        tw.WriteAttributeString("InputType", "OBSERVED,TARGET");
                         tw.WriteValue("log power usage");
                     tw.WriteEndElement();
                 tw.WriteEndElement();
@@ -284,22 +303,8 @@ namespace DNN.net.dataset.tft.electricity
                     tw.WriteElementString("File", "known_num.npy");
                     
                     tw.WriteStartElement("Field");
-                        tw.WriteAttributeString("Index", "0");
-                        tw.WriteAttributeString("DateType", "REAL");
-                        tw.WriteAttributeString("InputType", "TIME");
-                        tw.WriteValue("time");
-                    tw.WriteEndElement();
-
-                    tw.WriteStartElement("Field");
-                        tw.WriteAttributeString("Index", "1");
-                        tw.WriteAttributeString("DateType", "REAL");
-                        tw.WriteAttributeString("InputType", "ID");
-                        tw.WriteValue("customer id");
-                    tw.WriteEndElement();
-
-                    tw.WriteStartElement("Field");
                         tw.WriteAttributeString("Index", "2");
-                        tw.WriteAttributeString("DateType", "REAL");
+                        tw.WriteAttributeString("DataType", "REAL");
                         tw.WriteAttributeString("InputType", "KNOWN");
                         tw.WriteAttributeString("DerivedFrom", "TIME:0");
                         tw.WriteAttributeString("Calculation", "HR");
@@ -308,7 +313,7 @@ namespace DNN.net.dataset.tft.electricity
 
                     tw.WriteStartElement("Field");
                         tw.WriteAttributeString("Index", "3");
-                        tw.WriteAttributeString("DateType", "REAL");
+                        tw.WriteAttributeString("DataType", "REAL");
                         tw.WriteAttributeString("InputType", "KNOWN");
                         tw.WriteAttributeString("DerivedFrom", "TIME:0");
                         tw.WriteAttributeString("Calculation", "HRFS");
@@ -325,24 +330,17 @@ namespace DNN.net.dataset.tft.electricity
         {
             tw.WriteStartElement("Static");
                 tw.WriteStartElement("Numeric");
-                    tw.WriteElementString("File", "static_num.npy");
-
-                    tw.WriteStartElement("Field");
-                        tw.WriteAttributeString("Index", "0");
-                        tw.WriteAttributeString("DateType", "REAL");
-                        tw.WriteAttributeString("InputType", "TIME");
-                        tw.WriteValue("time");
-                    tw.WriteEndElement();
-
-                    tw.WriteStartElement("Field");
-                        tw.WriteAttributeString("Index", "1");
-                        tw.WriteAttributeString("DateType", "REAL");
-                        tw.WriteAttributeString("InputType", "STATIC");
-                        tw.WriteValue("customer id");
-                    tw.WriteEndElement();
                 tw.WriteEndElement();
 
                 tw.WriteStartElement("Categorical");
+                    tw.WriteElementString("File", "static_cat.npy");
+
+                    tw.WriteStartElement("Field");
+                        tw.WriteAttributeString("Index", "1");
+                        tw.WriteAttributeString("DataType", "REAL");
+                        tw.WriteAttributeString("InputType", "STATIC");
+                        tw.WriteValue("customer id");
+                    tw.WriteEndElement();
                 tw.WriteEndElement();
             tw.WriteEndElement();
         }
@@ -368,11 +366,12 @@ namespace DNN.net.dataset.tft.electricity
 
         private bool saveSchemaFile(string strPath, string strSub)
         {
-            using (XmlTextWriter tw = new XmlTextWriter(strPath + "\\electricity_" + strSub + "_schema.xml", null))
+            using (XmlTextWriter tw = new XmlTextWriter(strPath + "\\" + strSub + "_schema.xml", null))
             {
                 tw.WriteStartDocument();
                     tw.WriteStartElement("Schema");
                         tw.WriteStartElement("Data");
+                            saveSync(tw);
                             saveObserved(tw);
                             saveKnown(tw);
                             saveStatic(tw);
