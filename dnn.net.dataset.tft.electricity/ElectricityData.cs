@@ -150,7 +150,7 @@ namespace DNN.net.dataset.tft.electricity
                 return false;
 
             m_log.WriteLine("Saving schema file...");
-            if (!saveSchemaFile(strPath1, strSub))
+            if (!saveSchemaFile(strPath1, strSub, m_data.Columns))
                 return false;
 
             return false;
@@ -361,13 +361,14 @@ namespace DNN.net.dataset.tft.electricity
             tw.WriteEndElement();
         }
 
-        private bool saveSchemaFile(string strPath, string strSub)
+        private bool saveSchemaFile(string strPath, string strSub, int nColumns)
         {
             using (XmlTextWriter tw = new XmlTextWriter(strPath + "\\" + strSub + "_schema.xml", null))
             {
                 tw.WriteStartDocument();
                     tw.WriteStartElement("Schema");
                         tw.WriteStartElement("Data");
+                        tw.WriteAttributeString("Columns", nColumns.ToString());
                             saveSync(tw);
                             saveObserved(tw);
                             saveKnown(tw);
@@ -617,6 +618,11 @@ namespace DNN.net.dataset.tft.electricity
             m_rgRecordsByCustomer[rec.CustomerID].Add(rec);
 
             m_nCount++;
+        }
+
+        public int Columns
+        {
+            get { return m_rgRecordsByCustomer.First().Value.Count; }
         }
 
         public int Count
