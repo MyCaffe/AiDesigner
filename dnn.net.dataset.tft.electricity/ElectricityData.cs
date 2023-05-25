@@ -43,7 +43,7 @@ namespace DNN.net.dataset.tft.electricity
 
         public bool LoadData(DateTime dtStart, DateTime dtEnd)
         {
-            m_data.StartTime = DateTime.MinValue;
+            m_data.StartTime = DateTime.MaxValue;
             m_data.Clear();
             m_rgCustomers.Clear();
 
@@ -76,7 +76,7 @@ namespace DNN.net.dataset.tft.electricity
 
                     if (dt >= dtStart && dt < dtEnd)
                     {
-                        if (m_data.StartTime == DateTime.MinValue)
+                        if (dt < m_data.StartTime)
                             m_data.StartTime = dt;
 
                         for (int i = 1; i < rgstrData.Length; i++)
@@ -165,11 +165,11 @@ namespace DNN.net.dataset.tft.electricity
             long[] rgCustomer = new long[nRecords * nFields];
             int nIdxCustomer = 0;
 
-            foreach (KeyValuePair<int, List<DataRecord>> kv in m_data.RecordsByCustomer)
+            foreach (KeyValuePair<int, DataRecordCollection> kv in m_data.RecordsByCustomer)
             {
                 int nIdx = 0;
 
-                foreach (DataRecord rec in kv.Value)
+                foreach (DataRecord rec in kv.Value.Items)
                 {
                     rgCustomer[nIdx++] = ((DateTimeOffset)rec.Date).ToUnixTimeSeconds();
                     rgCustomer[nIdx++] = rec.CustomerID;
@@ -192,11 +192,11 @@ namespace DNN.net.dataset.tft.electricity
             float[] rgCustomer = new float[nRecords * nFields];
             int nIdxCustomer = 0;
 
-            foreach (KeyValuePair<int, List<DataRecord>> kv in m_data.RecordsByCustomer)
+            foreach (KeyValuePair<int, DataRecordCollection> kv in m_data.RecordsByCustomer)
             {
                 int nIdx = 0;
 
-                foreach (DataRecord rec in kv.Value)
+                foreach (DataRecord rec in kv.Value.Items)
                 {
                     rgCustomer[nIdx++] = (float)rec.NormalizedPowerUsage;
                 }
@@ -214,21 +214,18 @@ namespace DNN.net.dataset.tft.electricity
             int nCustomers = m_rgCustomers.Count;
             int nRecords = m_data.RecordsPerCustomer;
             int nFields = 2;
-            DateTime dtStart = m_data.StartTime;
             float[] rgData = new float[nCustomers * nRecords * nFields];
             float[] rgCustomer = new float[nRecords * nFields];
             int nIdxCustomer = 0;
 
-            foreach (KeyValuePair<int, List<DataRecord>> kv in m_data.RecordsByCustomer)
+            foreach (KeyValuePair<int, DataRecordCollection> kv in m_data.RecordsByCustomer)
             {
                 int nIdx = 0;
 
-                foreach (DataRecord rec in kv.Value)
+                foreach (DataRecord rec in kv.Value.Items)
                 {
-                    TimeSpan ts = rec.Date - dtStart;
-
-                    rgCustomer[nIdx++] = rec.Date.Hour;
-                    rgCustomer[nIdx++] = (float)ts.TotalHours;
+                    rgCustomer[nIdx++] = (float)rec.NormalizedHour;
+                    rgCustomer[nIdx++] = (float)rec.NormalizedHourFromStart;
                 }
 
                 Array.Copy(rgCustomer, 0, rgData, rgCustomer.Length * nIdxCustomer, rgCustomer.Length);
@@ -246,7 +243,7 @@ namespace DNN.net.dataset.tft.electricity
             long[] rgData = new long[nCustomers * nFields];
             int nIdxCustomer = 0;
 
-            foreach (KeyValuePair<int, List<DataRecord>> kv in m_data.RecordsByCustomer)
+            foreach (KeyValuePair<int, DataRecordCollection> kv in m_data.RecordsByCustomer)
             {
                 rgData[nIdxCustomer] = kv.Value[0].CustomerID;
                 nIdxCustomer++;
@@ -284,7 +281,7 @@ namespace DNN.net.dataset.tft.electricity
                     tw.WriteElementString("File", "observed_num.npy");
                     
                     tw.WriteStartElement("Field");
-                        tw.WriteAttributeString("Index", "2");
+                        tw.WriteAttributeString("Index", "0");
                         tw.WriteAttributeString("DataType", "REAL");
                         tw.WriteAttributeString("InputType", "OBSERVED,TARGET");
                         tw.WriteValue("log power usage");
@@ -303,7 +300,7 @@ namespace DNN.net.dataset.tft.electricity
                     tw.WriteElementString("File", "known_num.npy");
                     
                     tw.WriteStartElement("Field");
-                        tw.WriteAttributeString("Index", "2");
+                        tw.WriteAttributeString("Index", "0");
                         tw.WriteAttributeString("DataType", "REAL");
                         tw.WriteAttributeString("InputType", "KNOWN");
                         tw.WriteAttributeString("DerivedFrom", "TIME:0");
@@ -312,7 +309,7 @@ namespace DNN.net.dataset.tft.electricity
                     tw.WriteEndElement();
 
                     tw.WriteStartElement("Field");
-                        tw.WriteAttributeString("Index", "3");
+                        tw.WriteAttributeString("Index", "1");
                         tw.WriteAttributeString("DataType", "REAL");
                         tw.WriteAttributeString("InputType", "KNOWN");
                         tw.WriteAttributeString("DerivedFrom", "TIME:0");
@@ -336,7 +333,7 @@ namespace DNN.net.dataset.tft.electricity
                     tw.WriteElementString("File", "static_cat.npy");
 
                     tw.WriteStartElement("Field");
-                        tw.WriteAttributeString("Index", "1");
+                        tw.WriteAttributeString("Index", "0");
                         tw.WriteAttributeString("DataType", "REAL");
                         tw.WriteAttributeString("InputType", "STATIC");
                         tw.WriteValue("customer id");
@@ -388,25 +385,103 @@ namespace DNN.net.dataset.tft.electricity
         }
     }
 
+    public class DataRecordCollection
+    {
+        List<DataRecord> m_rgItems = new List<DataRecord>();
+
+        public DataRecordCollection()
+        {
+        }
+
+        public void Add(DataRecord rec)
+        {
+            m_rgItems.Add(rec);
+        }
+
+        public DataRecord this[int nIdx]
+        {
+            get { return m_rgItems[nIdx]; }
+        }
+
+        public int Count
+        {
+            get { return m_rgItems.Count; }
+        }
+
+        public void SetStart(DateTime dt)
+        {
+            foreach (DataRecord rec in m_rgItems)
+            {
+                rec.SetStart(dt);
+            }
+        }
+
+        public void CalculateStatistics(DataRecord.FIELD field, out double dfMean1, out double dfStdev1, bool bOnlyNonZero = false)
+        {
+            double dfTotal = m_rgItems.Sum(p => p.Item(field));
+            int nCount = m_rgItems.Count;
+            if (bOnlyNonZero)
+                nCount = m_rgItems.Count(p => p.Item(field) != 0);
+
+            double dfMean = dfTotal / nCount;
+            double dfStdev = Math.Sqrt(m_rgItems.Sum(p => Math.Pow(p.Item(field) - dfMean, 2)) / nCount);
+            dfMean1 = dfMean;
+            dfStdev1 = dfStdev;
+        }
+
+        public void Normalize(DataRecord.FIELD src, DataRecord.FIELD dst, double dfMean, double dfStdev)
+        {
+            for (int i = 0; i < m_rgItems.Count; i++)
+            {
+                if (m_rgItems[i].IsValid)
+                {
+                    double dfVal = m_rgItems[i].Item(src);
+                    dfVal = (dfVal - dfMean) / dfStdev;
+                    m_rgItems[i].Item(dst, dfVal);
+                }
+            }
+        }
+
+        public List<DataRecord> Items
+        {
+            get { return m_rgItems; }
+        }
+    }
+
     public class DataRecord
     {
         int m_nCustomerID;
         DateTime m_dt;
-        double m_dfPowerUsage;
-        double m_dfLogPowerUsage;
-        double m_dfNormalizedPowerUsage;
+        double[] m_rgFields = new double[7];
+
+        public enum FIELD
+        {
+            POWER_USAGE = 0,
+            LOG_POWER_USAGE = 1,
+            NORMALIZED_POWER_USAGE = 2,
+            HOUR = 3,
+            NORMALIZED_HOUR = 4,
+            HOURS_FROM_START = 5,
+            NORMALIZED_HOURS_FROM_START = 6
+        }
 
         public DataRecord(int nCustomerID, DateTime dt, double dfPowerUsage)
         {
             m_nCustomerID = nCustomerID;
             m_dt = dt;
-            m_dfPowerUsage = dfPowerUsage;
-            m_dfLogPowerUsage = (dfPowerUsage == 0) ? 0 : Math.Log(dfPowerUsage);
+            m_rgFields[(int)FIELD.HOUR] = dt.Hour;
+            m_rgFields[(int)FIELD.POWER_USAGE] = dfPowerUsage;
+
+            double dfLogPowerUsage = (dfPowerUsage == 0) ? 0 : Math.Log(dfPowerUsage);
+            if (double.IsNaN(dfLogPowerUsage) || double.IsInfinity(dfLogPowerUsage))
+                dfLogPowerUsage = 0;
+
+            m_rgFields[(int)FIELD.LOG_POWER_USAGE] = dfLogPowerUsage;
         }
 
         public bool IsValid
         {
-            get { return (m_dfPowerUsage > 0) ? true : false; }
+            get { return (PowerUsage > 0) ? true : false; }
         }
 
         public int CustomerID
@@ -419,20 +494,59 @@ namespace DNN.net.dataset.tft.electricity
             get { return m_dt; }
         }
 
+        public double Item(FIELD field)
+        {
+            return m_rgFields[(int)field];
+        }
+
+        public void Item(FIELD field, double dfVal)
+        {
+            m_rgFields[(int)field] = dfVal;
+        }
+
         public double PowerUsage
         {
-            get { return m_dfPowerUsage; }
+            get { return m_rgFields[(int)FIELD.POWER_USAGE]; }
         }
 
         public double LogPowerUsage
         {
-            get { return m_dfLogPowerUsage; }
+            get { return m_rgFields[(int)FIELD.LOG_POWER_USAGE]; }
         }
 
         public double NormalizedPowerUsage
         {
-            get { return m_dfNormalizedPowerUsage; }
-            set { m_dfNormalizedPowerUsage = value; }
+            get { return m_rgFields[(int)FIELD.NORMALIZED_POWER_USAGE]; }
+            set { m_rgFields[(int)FIELD.NORMALIZED_POWER_USAGE] = value; }
+        }
+
+        public double Hour
+        {
+            get { return m_rgFields[(int)FIELD.HOUR]; }
+        }
+
+        public double NormalizedHour
+        {
+            get { return m_rgFields[(int)FIELD.NORMALIZED_HOUR]; }
+            set { m_rgFields[(int)FIELD.NORMALIZED_HOUR] = value; }
+        }
+
+        public double HoursFromStart
+        {
+            get { return m_rgFields[(int)FIELD.HOURS_FROM_START]; }
+            set { m_rgFields[(int)FIELD.HOURS_FROM_START] = value; }
+        }
+
+        public double NormalizedHourFromStart
+        {
+            get { return m_rgFields[(int)FIELD.NORMALIZED_HOURS_FROM_START]; }
+            set { m_rgFields[(int)FIELD.NORMALIZED_HOURS_FROM_START] = value; }
+        }
+
+        public void SetStart(DateTime dt)
+        {
+            TimeSpan ts = m_dt - dt;
+            m_rgFields[(int)FIELD.HOURS_FROM_START] = ts.TotalHours;
         }
 
         public override string ToString()
@@ -443,11 +557,11 @@ namespace DNN.net.dataset.tft.electricity
             sb.Append(IsValid ? "VALID" : "INVALID");
             sb.Append(' ');
             sb.Append("pwr = ");
-            sb.Append(m_dfPowerUsage.ToString());
+            sb.Append(PowerUsage.ToString());
             sb.Append(" logpwr = ");
-            sb.Append(m_dfLogPowerUsage.ToString());
+            sb.Append(LogPowerUsage.ToString());
             sb.Append(" normpwr = ");
-            sb.Append(m_dfNormalizedPowerUsage.ToString());
+            sb.Append(NormalizedPowerUsage.ToString());
 
             return sb.ToString();
         }
@@ -456,8 +570,7 @@ namespace DNN.net.dataset.tft.electricity
     public class DataTable
     {
         int m_nCount = 0;
-        Dictionary<int, List<DataRecord>> m_rgRecordsByCustomer = new Dictionary<int, List<DataRecord>>();
-        Dictionary<int, double> m_rgTotalsByCustomer = new Dictionary<int, double>();
+        Dictionary<int, DataRecordCollection> m_rgRecordsByCustomer = new Dictionary<int, DataRecordCollection>();
         Dictionary<int, Tuple<int, int>> m_rgValidRangeByCustomer = new Dictionary<int, Tuple<int, int>>();
         DateTime m_dtStart = DateTime.MinValue;
 
@@ -468,7 +581,7 @@ namespace DNN.net.dataset.tft.electricity
         public DataTable Split(double dfPctStart, double dfPctEnd)
         {
             DataTable dt = new DataTable();
-            foreach (KeyValuePair<int, List<DataRecord>> kv in m_rgRecordsByCustomer)
+            foreach (KeyValuePair<int, DataRecordCollection> kv in m_rgRecordsByCustomer)
             {
                 int nStartIdx = (int)(kv.Value.Count * dfPctStart);
                 int nEndIdx = (int)(kv.Value.Count * dfPctEnd);
@@ -499,7 +612,7 @@ namespace DNN.net.dataset.tft.electricity
         public void Add(DataRecord rec)
         {
             if (!m_rgRecordsByCustomer.ContainsKey(rec.CustomerID))
-                m_rgRecordsByCustomer.Add(rec.CustomerID, new List<DataRecord>());
+                m_rgRecordsByCustomer.Add(rec.CustomerID, new DataRecordCollection());
 
             m_rgRecordsByCustomer[rec.CustomerID].Add(rec);
 
@@ -518,7 +631,7 @@ namespace DNN.net.dataset.tft.electricity
 
         public long[] TimeSync
         {
-            get { return m_rgRecordsByCustomer.First().Value.Select(p => ((DateTimeOffset)p.Date).ToUnixTimeSeconds()).ToArray(); }
+            get { return m_rgRecordsByCustomer.First().Value.Items.Select(p => ((DateTimeOffset)p.Date).ToUnixTimeSeconds()).ToArray(); }
         }
 
         public DateTime StartTime
@@ -527,7 +640,7 @@ namespace DNN.net.dataset.tft.electricity
             set { m_dtStart = value; }
         }
 
-        public Dictionary<int, List<DataRecord>> RecordsByCustomer
+        public Dictionary<int, DataRecordCollection> RecordsByCustomer
         {
             get { return m_rgRecordsByCustomer; }
         }
@@ -544,33 +657,42 @@ namespace DNN.net.dataset.tft.electricity
 
         public DataTable ResampleByHour(Stopwatch sw, Log log, CancelEvent evtCancel)
         {
+            DateTime dtEarliestStart = DateTime.MaxValue;
             DataTable dt = new DataTable();
 
             sw.Restart();
 
             int nCustomerIdx = 0;
-            foreach (KeyValuePair<int, List<DataRecord>> kv in m_rgRecordsByCustomer)
+            foreach (KeyValuePair<int, DataRecordCollection> kv in m_rgRecordsByCustomer)
             {
                 int nStartIdx = -1;
                 int nEndIdx = 0;
-                List<DataRecord> rgRecs = kv.Value.OrderBy(p => p.Date).ToList();
+                List<DataRecord> rgRecs = kv.Value.Items.OrderBy(p => p.Date).ToList();
 
                 DateTime dtStart = rgRecs[0].Date;
                 dtStart = new DateTime(dtStart.Year, dtStart.Month, dtStart.Day, dtStart.Hour, 0, 0);
                 DateTime dtEnd = dtStart + TimeSpan.FromHours(1);
-                double dfCustomerTotalPower = 0;
+
+                if (dtStart < dtEarliestStart)
+                    dtEarliestStart = dtStart;
 
                 int nIdx = 0;
                 while (nIdx < rgRecs.Count)
                 {
-                    double dfTotal = 0;
+                    double dfItemTotal = 0;
+                    int nItemCount = 0;
                     while (nIdx < rgRecs.Count && rgRecs[nIdx].Date < dtEnd)
                     {
-                        dfTotal += rgRecs[nIdx].PowerUsage;
+                        if (rgRecs[nIdx].IsValid)
+                        {
+                            dfItemTotal += rgRecs[nIdx].PowerUsage;
+                            nItemCount++;
+                        }
+
                         nIdx++;
                     }
 
-                    DataRecord rec = new DataRecord(kv.Key, dtStart, (long)dfTotal);
+                    DataRecord rec = new DataRecord(kv.Key, dtStart, (nItemCount == 0) ? 0 : dfItemTotal / nItemCount);
                     dt.Add(rec);
 
                     if (rec.IsValid)
@@ -580,8 +702,6 @@ namespace DNN.net.dataset.tft.electricity
 
                         nEndIdx = dt.m_rgRecordsByCustomer[kv.Key].Count - 1;
                     }
-
-                    dfCustomerTotalPower += rec.LogPowerUsage;
 
                     dtStart = dtEnd;
                     dtEnd += TimeSpan.FromHours(1);
@@ -600,20 +720,19 @@ namespace DNN.net.dataset.tft.electricity
 
                 dt.m_rgValidRangeByCustomer.Remove(kv.Key);
                 dt.m_rgValidRangeByCustomer.Add(kv.Key, new Tuple<int, int>(nStartIdx, nEndIdx));
-
-                if (dfCustomerTotalPower > 0)
-                    dt.m_rgTotalsByCustomer.Add(kv.Key, dfCustomerTotalPower);
                 nCustomerIdx++;
             }
 
             int nCount = 0;
-            foreach (KeyValuePair<int, List<DataRecord>> kv in m_rgRecordsByCustomer)
+            foreach (KeyValuePair<int, DataRecordCollection> kv in dt.m_rgRecordsByCustomer)
             {
                 if (nCount == 0)
                     nCount = kv.Value.Count;
 
                 if (nCount != kv.Value.Count)
                     throw new Exception("The number of records for each customer must be the same!");
+
+                kv.Value.SetStart(dtEarliestStart);
             }
 
             return dt;
@@ -624,45 +743,33 @@ namespace DNN.net.dataset.tft.electricity
             sw.Restart();
 
             int nIdx = 0;
-            int nTotal = m_rgRecordsByCustomer.Sum(p => p.Value.Count);
 
-            foreach (KeyValuePair<int, List<DataRecord>> kv in m_rgRecordsByCustomer)
+            foreach (KeyValuePair<int, DataRecordCollection> kv in m_rgRecordsByCustomer)
             {
-                int nValidCount = kv.Value.Count(p => p.IsValid);
-                double dfTotal = m_rgTotalsByCustomer[kv.Key];
-                double dfMean = dfTotal / nValidCount;
-                double dfSumDiffSq = 0;
+                double dfMean;
+                double dfStdev;
 
-                for (int i = 0; i < kv.Value.Count; i++)
+                kv.Value.CalculateStatistics(DataRecord.FIELD.LOG_POWER_USAGE, out dfMean, out dfStdev, true);
+                kv.Value.Normalize(DataRecord.FIELD.LOG_POWER_USAGE, DataRecord.FIELD.NORMALIZED_POWER_USAGE, dfMean, dfStdev);
+
+                kv.Value.CalculateStatistics(DataRecord.FIELD.HOUR, out dfMean, out dfStdev);
+                kv.Value.Normalize(DataRecord.FIELD.HOUR, DataRecord.FIELD.NORMALIZED_HOUR, dfMean, dfStdev);
+
+                kv.Value.CalculateStatistics(DataRecord.FIELD.HOURS_FROM_START, out dfMean, out dfStdev);
+                kv.Value.Normalize(DataRecord.FIELD.HOURS_FROM_START, DataRecord.FIELD.NORMALIZED_HOURS_FROM_START, dfMean, dfStdev);
+
+                if (sw.Elapsed.TotalMilliseconds > 1000)
                 {
-                    if (kv.Value[i].PowerUsage == 0)
-                        continue;
+                    sw.Restart();
 
-                    dfSumDiffSq += Math.Pow(kv.Value[i].LogPowerUsage - dfMean, 2);
+                    double dfPct = (double)nIdx / m_rgRecordsByCustomer.Count;
+                    log.WriteLine("Normalizing data at " + dfPct.ToString("P") + " complete.");
+
+                    if (evtCancel.WaitOne(0))
+                        return false;
                 }
 
-                double dfStdDev = Math.Sqrt(dfSumDiffSq / nValidCount);
-
-                for (int i = 0; i < kv.Value.Count; i++)
-                {
-                    double dfNormVal = 0;
-
-                    if (kv.Value[i].PowerUsage > 0)
-                        dfNormVal = (kv.Value[i].LogPowerUsage - dfMean) / dfStdDev;
-
-                    kv.Value[i].NormalizedPowerUsage = dfNormVal;
-                    nIdx++;
-
-                    if (sw.Elapsed.TotalMilliseconds > 1000)
-                    {
-                        sw.Restart();
-                        double dfPct = (double)nIdx / (double)nTotal;
-                        log.WriteLine("Normalizing data at " + dfPct.ToString("P") + " complete.");
-
-                        if (evtCancel.WaitOne(0))
-                            return false;
-                    }
-                }
+                nIdx++;
             }
 
             return true;
