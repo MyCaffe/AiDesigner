@@ -430,15 +430,15 @@ namespace DNN.net.dataset.tft.electricity
             dfStdev1 = dfStdev;
         }
 
-        public void Normalize(DataRecord.FIELD src, DataRecord.FIELD dst, double dfMean, double dfStdev)
+        public void Normalize(DataRecord.FIELD dt, double dfMean, double dfStdev)
         {
             for (int i = 0; i < m_rgItems.Count; i++)
             {
                 if (m_rgItems[i].IsValid)
                 {
-                    double dfVal = m_rgItems[i].Item(src);
+                    double dfVal = m_rgItems[i].Item(dt);
                     dfVal = (dfVal - dfMean) / dfStdev;
-                    m_rgItems[i].Item(dst, dfVal);
+                    m_rgItems[i].ItemNormalized(dt, dfVal);
                 }
             }
         }
@@ -453,17 +453,15 @@ namespace DNN.net.dataset.tft.electricity
     {
         int m_nCustomerID;
         DateTime m_dt;
-        double[] m_rgFields = new double[7];
+        double[] m_rgFields = new double[4];
+        double[] m_rgFieldsNormalized = new double[4];
 
         public enum FIELD
         {
             POWER_USAGE = 0,
             LOG_POWER_USAGE = 1,
-            NORMALIZED_POWER_USAGE = 2,
-            HOUR = 3,
-            NORMALIZED_HOUR = 4,
-            HOURS_FROM_START = 5,
-            NORMALIZED_HOURS_FROM_START = 6
+            HOUR = 2,
+            HOURS_FROM_START = 3,
         }
 
         public DataRecord(int nCustomerID, DateTime dt, double dfPowerUsage)
@@ -505,6 +503,16 @@ namespace DNN.net.dataset.tft.electricity
             m_rgFields[(int)field] = dfVal;
         }
 
+        public double ItemNormalized(FIELD field)
+        {
+            return m_rgFieldsNormalized[(int)field];
+        }
+
+        public void ItemNormalized(FIELD field, double dfVal)
+        {
+            m_rgFieldsNormalized[(int)field] = dfVal;
+        }
+
         public double PowerUsage
         {
             get { return m_rgFields[(int)FIELD.POWER_USAGE]; }
@@ -517,8 +525,8 @@ namespace DNN.net.dataset.tft.electricity
 
         public double NormalizedPowerUsage
         {
-            get { return m_rgFields[(int)FIELD.NORMALIZED_POWER_USAGE]; }
-            set { m_rgFields[(int)FIELD.NORMALIZED_POWER_USAGE] = value; }
+            get { return m_rgFieldsNormalized[(int)FIELD.POWER_USAGE]; }
+            set { m_rgFieldsNormalized[(int)FIELD.POWER_USAGE] = value; }
         }
 
         public double Hour
@@ -528,8 +536,8 @@ namespace DNN.net.dataset.tft.electricity
 
         public double NormalizedHour
         {
-            get { return m_rgFields[(int)FIELD.NORMALIZED_HOUR]; }
-            set { m_rgFields[(int)FIELD.NORMALIZED_HOUR] = value; }
+            get { return m_rgFieldsNormalized[(int)FIELD.HOUR]; }
+            set { m_rgFieldsNormalized[(int)FIELD.HOUR] = value; }
         }
 
         public double HoursFromStart
@@ -540,8 +548,8 @@ namespace DNN.net.dataset.tft.electricity
 
         public double NormalizedHourFromStart
         {
-            get { return m_rgFields[(int)FIELD.NORMALIZED_HOURS_FROM_START]; }
-            set { m_rgFields[(int)FIELD.NORMALIZED_HOURS_FROM_START] = value; }
+            get { return m_rgFieldsNormalized[(int)FIELD.HOURS_FROM_START]; }
+            set { m_rgFieldsNormalized[(int)FIELD.HOURS_FROM_START] = value; }
         }
 
         public void SetStart(DateTime dt)
@@ -756,13 +764,13 @@ namespace DNN.net.dataset.tft.electricity
                 double dfStdev;
 
                 kv.Value.CalculateStatistics(DataRecord.FIELD.LOG_POWER_USAGE, out dfMean, out dfStdev, true);
-                kv.Value.Normalize(DataRecord.FIELD.LOG_POWER_USAGE, DataRecord.FIELD.NORMALIZED_POWER_USAGE, dfMean, dfStdev);
+                kv.Value.Normalize(DataRecord.FIELD.LOG_POWER_USAGE, dfMean, dfStdev);
 
                 kv.Value.CalculateStatistics(DataRecord.FIELD.HOUR, out dfMean, out dfStdev);
-                kv.Value.Normalize(DataRecord.FIELD.HOUR, DataRecord.FIELD.NORMALIZED_HOUR, dfMean, dfStdev);
+                kv.Value.Normalize(DataRecord.FIELD.HOUR, dfMean, dfStdev);
 
                 kv.Value.CalculateStatistics(DataRecord.FIELD.HOURS_FROM_START, out dfMean, out dfStdev);
-                kv.Value.Normalize(DataRecord.FIELD.HOURS_FROM_START, DataRecord.FIELD.NORMALIZED_HOURS_FROM_START, dfMean, dfStdev);
+                kv.Value.Normalize(DataRecord.FIELD.HOURS_FROM_START, dfMean, dfStdev);
 
                 if (sw.Elapsed.TotalMilliseconds > 1000)
                 {
