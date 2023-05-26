@@ -46,7 +46,7 @@ namespace DNN.net.dataset.tft.electricity
 
         public string Name
         {
-            get { return "TFT.electricity"; }
+            get { return "TFT.Electricity"; }
         }
 
         public IMGDB_VERSION ImageDbVersion
@@ -155,7 +155,7 @@ namespace DNN.net.dataset.tft.electricity
                 }
                 else
                 {
-                    log.WriteLine("Done converting VOC0712 data files.");
+                    log.WriteLine("Done converting LD2011 Electricity data files.");
                     m_iprogress.OnCompleted(new CreateProgressArgs(1, "COMPLETED."));
                 }
 
