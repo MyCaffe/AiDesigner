@@ -1,0 +1,45 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="DNN.net.dataset.tft.traffic.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="DataFileTest" Type="System.String" Scope="User">
+      <Value Profile="(Default)">PEMS_test</Value>
+    </Setting>
+    <Setting Name="OutputPath" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="StartDate" Type="System.String" Scope="User">
+      <Value Profile="(Default)">1/1/2015</Value>
+    </Setting>
+    <Setting Name="EndDate" Type="System.String" Scope="User">
+      <Value Profile="(Default)">6/1/2016</Value>
+    </Setting>
+    <Setting Name="OutputType" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">1</Value>
+    </Setting>
+    <Setting Name="TrainingSplitPct" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">0.8</Value>
+    </Setting>
+    <Setting Name="TestingSplitPct" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">0.1</Value>
+    </Setting>
+    <Setting Name="ValidSplitPct" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">0.1</Value>
+    </Setting>
+    <Setting Name="DataFileTestLabels" Type="System.String" Scope="User">
+      <Value Profile="(Default)">PEMS_testlabels</Value>
+    </Setting>
+    <Setting Name="DataFileTrain" Type="System.String" Scope="User">
+      <Value Profile="(Default)">PEMS_train</Value>
+    </Setting>
+    <Setting Name="DataFileTrainLabels" Type="System.String" Scope="User">
+      <Value Profile="(Default)">PEMS_trainlabels</Value>
+    </Setting>
+    <Setting Name="DataFileRandPerm" Type="System.String" Scope="User">
+      <Value Profile="(Default)">randperm</Value>
+    </Setting>
+    <Setting Name="DataFileStationList" Type="System.String" Scope="User">
+      <Value Profile="(Default)">stations_list</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>
