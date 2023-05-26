@@ -8,12 +8,6 @@
     <Setting Name="OutputPath" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
-    <Setting Name="StartDate" Type="System.String" Scope="User">
-      <Value Profile="(Default)">1/1/2015</Value>
-    </Setting>
-    <Setting Name="EndDate" Type="System.String" Scope="User">
-      <Value Profile="(Default)">6/1/2016</Value>
-    </Setting>
     <Setting Name="OutputType" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">1</Value>
     </Setting>

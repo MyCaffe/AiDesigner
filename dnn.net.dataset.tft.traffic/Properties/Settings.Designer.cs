@@ -49,30 +49,6 @@ namespace DNN.net.dataset.tft.traffic.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("1/1/2015")]
-        public string StartDate {
-            get {
-                return ((string)(this["StartDate"]));
-            }
-            set {
-                this["StartDate"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("6/1/2016")]
-        public string EndDate {
-            get {
-                return ((string)(this["EndDate"]));
-            }
-            set {
-                this["EndDate"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("1")]
         public int OutputType {
             get {

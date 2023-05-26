@@ -79,8 +79,6 @@ namespace DNN.net.dataset.tft.traffic
 
             string strOutputPath = Properties.Settings.Default.OutputPath;
             OUTPUT_TYPE outType = (OUTPUT_TYPE)Properties.Settings.Default.OutputType;
-            DateTime dtStart = DateTime.Parse(Properties.Settings.Default.StartDate);
-            DateTime dtEnd = DateTime.Parse(Properties.Settings.Default.EndDate);
 
             config.Settings.Add(new DataConfigSetting("Output Dataset Name", Name));
             config.Settings.Add(new DataConfigSetting("Data File PEMS train", strDataFileTrain, DataConfigSetting.TYPE.FILENAME));
@@ -91,8 +89,6 @@ namespace DNN.net.dataset.tft.traffic
             config.Settings.Add(new DataConfigSetting("Data File stations_list", strDataFileStationList, DataConfigSetting.TYPE.FILENAME));
 
             config.Settings.Add(new DataConfigSetting("Output Path", strOutputPath, DataConfigSetting.TYPE.DIRECTORY));
-            config.Settings.Add(new DataConfigSetting("Start Date", dtStart, DataConfigSetting.TYPE.DATETIME));
-            config.Settings.Add(new DataConfigSetting("End Date", dtEnd, DataConfigSetting.TYPE.DATETIME));
             config.Settings.Add(new DataConfigSetting("Train Split", Properties.Settings.Default.TrainingSplitPct, DataConfigSetting.TYPE.REAL));
             config.Settings.Add(new DataConfigSetting("Test Split", Properties.Settings.Default.TestingSplitPct, DataConfigSetting.TYPE.REAL));
             config.Settings.Add(new DataConfigSetting("Validation Split", Properties.Settings.Default.ValidSplitPct, DataConfigSetting.TYPE.REAL));
@@ -108,8 +104,6 @@ namespace DNN.net.dataset.tft.traffic
             string strDataFileRandPerm = Properties.Settings.Default.DataFileRandPerm;
             string strDataFileStationsList = Properties.Settings.Default.DataFileStationList;
             string strOutputPath = Properties.Settings.Default.OutputPath;
-            DateTime dtStart = DateTime.Parse(Properties.Settings.Default.StartDate);
-            DateTime dtEnd = DateTime.Parse(Properties.Settings.Default.EndDate);
 
             m_evtCancel.Reset();
 
@@ -120,8 +114,6 @@ namespace DNN.net.dataset.tft.traffic
             strDataFileRandPerm = config.Settings.Find("Data File randperm").Value.ToString();
             strDataFileStationsList = config.Settings.Find("Data File stations_list").Value.ToString();
             strOutputPath = config.Settings.Find("Output Path").Value.ToString();
-            dtStart = (DateTime)config.Settings.Find("Start Date").Value;
-            dtEnd = (DateTime)config.Settings.Find("End Date").Value;
             double dfTrainSplit = (double)config.Settings.Find("Train Split").Value;
             double dfTestSplit = (double)config.Settings.Find("Test Split").Value;
             double dfValSplit = (double)config.Settings.Find("Validation Split").Value;
@@ -153,8 +145,6 @@ namespace DNN.net.dataset.tft.traffic
                     throw new Exception("Could not find the data file '" + strDataFileRandPerm + "'.");
                 if (!File.Exists(strDataFileStationsList))
                     throw new Exception("Could not find the data file '" + strDataFileStationsList + "'.");
-
-                log.WriteLine("Converting " + Name + " data files from " + dtStart.ToShortDateString() + " to " + dtEnd.ToShortDateString() + "...");
 
                 TrafficData data = new TrafficData(strDataFileTrain, strDataFileTrainLabels, strDataFileTest, strDataFileTestLabels, strDataFileRandPerm, strDataFileStationsList, log, m_evtCancel);
                 if (data.LoadData())
@@ -197,8 +187,6 @@ namespace DNN.net.dataset.tft.traffic
                 Properties.Settings.Default.DataFileRandPerm = strDataFileRandPerm;
                 Properties.Settings.Default.DataFileStationList = strDataFileStationsList;
                 Properties.Settings.Default.OutputPath = strOutputPath;
-                Properties.Settings.Default.StartDate = dtStart.ToString();
-                Properties.Settings.Default.EndDate = dtEnd.ToString();
                 Properties.Settings.Default.OutputType = (int)outType;
                 Properties.Settings.Default.TrainingSplitPct = dfTrainSplit;
                 Properties.Settings.Default.TestingSplitPct = dfTestSplit;
