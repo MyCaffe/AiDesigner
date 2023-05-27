@@ -198,7 +198,7 @@ namespace DNN.net.dataset.tft.electricity
 
                 foreach (DataRecord rec in kv.Value.Items)
                 {
-                    rgCustomer[nIdx++] = (float)rec.NormalizedPowerUsage;
+                    rgCustomer[nIdx++] = (float)rec.NormalizedLogPowerUsage;
                 }
 
                 Array.Copy(rgCustomer, 0, rgData, rgCustomer.Length * nIdxCustomer, rgCustomer.Length);
@@ -523,10 +523,10 @@ namespace DNN.net.dataset.tft.electricity
             get { return m_rgFields[(int)FIELD.LOG_POWER_USAGE]; }
         }
 
-        public double NormalizedPowerUsage
+        public double NormalizedLogPowerUsage
         {
-            get { return m_rgFieldsNormalized[(int)FIELD.POWER_USAGE]; }
-            set { m_rgFieldsNormalized[(int)FIELD.POWER_USAGE] = value; }
+            get { return m_rgFieldsNormalized[(int)FIELD.LOG_POWER_USAGE]; }
+            set { m_rgFieldsNormalized[(int)FIELD.LOG_POWER_USAGE] = value; }
         }
 
         public double Hour
@@ -570,7 +570,7 @@ namespace DNN.net.dataset.tft.electricity
             sb.Append(" logpwr = ");
             sb.Append(LogPowerUsage.ToString());
             sb.Append(" normpwr = ");
-            sb.Append(NormalizedPowerUsage.ToString());
+            sb.Append(NormalizedLogPowerUsage.ToString());
 
             return sb.ToString();
         }
