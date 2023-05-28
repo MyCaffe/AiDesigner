@@ -467,7 +467,7 @@ namespace DNN.net.dataset.tft.traffic
                     tw.WriteStartElement("Field");
                         tw.WriteAttributeString("Index", "0");
                         tw.WriteAttributeString("DataType", "REAL");
-                        tw.WriteAttributeString("InputType", "TARGET");
+                        tw.WriteAttributeString("InputType", "OBSERVED,TARGET");
                         tw.WriteValue("value");
                     tw.WriteEndElement();
                 tw.WriteEndElement();
