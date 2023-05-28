@@ -107,23 +107,18 @@ namespace DNN.net.dataset.tft.electricity
                 }
             }
 
-            if (!NormalizeData())
+            DataTable dtbl = m_data.ResampleByHour(m_sw, m_log, m_evtCancel);
+            if (dtbl == null)
                 return false;
+
+            m_data = dtbl;
 
             return true;
         }
 
-        public bool NormalizeData()
+        public bool NormalizeData(Dictionary<DataRecord.FIELD, Tuple<double, double>> rgScalers)
         {
-            m_sw.Restart();
-
-            DataTable dt = m_data.ResampleByHour(m_sw, m_log, m_evtCancel);
-            if (dt == null)
-                return false;
-
-            m_data = dt;
-
-            return m_data.Normalize(m_sw, m_log, m_evtCancel);
+            return m_data.Normalize(m_sw, m_log, m_evtCancel, rgScalers);
         }
 
         public bool SaveAsNumpy(string strPath, string strSub)
@@ -752,7 +747,26 @@ namespace DNN.net.dataset.tft.electricity
             return dt;
         }
 
-        public bool Normalize(Stopwatch sw, Log log, CancelEvent evtCancel)
+        private void normalize(DataRecord.FIELD field, DataRecordCollection col, Dictionary<DataRecord.FIELD, Tuple<double, double>> rgScalers)
+        {
+            double dfMean;
+            double dfStdev;
+
+            if (rgScalers.ContainsKey(field))
+            {
+                dfMean = rgScalers[field].Item1;
+                dfStdev = rgScalers[field].Item2;
+            }
+            else
+            {
+                col.CalculateStatistics(field, out dfMean, out dfStdev, true);
+                rgScalers.Add(field, new Tuple<double, double>(dfMean, dfStdev));
+            }
+
+            col.Normalize(field, dfMean, dfStdev);
+        }
+
+        public bool Normalize(Stopwatch sw, Log log, CancelEvent evtCancel, Dictionary<DataRecord.FIELD, Tuple<double, double>> rgScalers)
         {
             sw.Restart();
 
@@ -760,17 +774,9 @@ namespace DNN.net.dataset.tft.electricity
 
             foreach (KeyValuePair<int, DataRecordCollection> kv in m_rgRecordsByCustomer)
             {
-                double dfMean;
-                double dfStdev;
-
-                kv.Value.CalculateStatistics(DataRecord.FIELD.LOG_POWER_USAGE, out dfMean, out dfStdev, true);
-                kv.Value.Normalize(DataRecord.FIELD.LOG_POWER_USAGE, dfMean, dfStdev);
-
-                kv.Value.CalculateStatistics(DataRecord.FIELD.HOUR, out dfMean, out dfStdev);
-                kv.Value.Normalize(DataRecord.FIELD.HOUR, dfMean, dfStdev);
-
-                kv.Value.CalculateStatistics(DataRecord.FIELD.HOURS_FROM_START, out dfMean, out dfStdev);
-                kv.Value.Normalize(DataRecord.FIELD.HOURS_FROM_START, dfMean, dfStdev);
+                normalize(DataRecord.FIELD.LOG_POWER_USAGE, kv.Value, rgScalers);
+                normalize(DataRecord.FIELD.HOUR, kv.Value, rgScalers);
+                normalize(DataRecord.FIELD.HOURS_FROM_START, kv.Value, rgScalers);
 
                 if (sw.Elapsed.TotalMilliseconds > 1000)
                 {
