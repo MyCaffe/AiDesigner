@@ -153,6 +153,11 @@ namespace DNN.net.dataset.tft.traffic
                     TrafficData dataTest = data.SplitData(dfTrainSplit, dfTrainSplit + dfTestSplit);
                     TrafficData dataVal = data.SplitData(dfTrainSplit + dfTestSplit, 1);
 
+                    Dictionary<DataRecord.FIELD, Tuple<double, double>> rgScalers = new Dictionary<DataRecord.FIELD, Tuple<double, double>>();
+                    dataTrain.NormalizeData(rgScalers);
+                    dataTest.NormalizeData(rgScalers);
+                    dataVal.NormalizeData(rgScalers);
+
                     if (outType == OUTPUT_TYPE.NPY)
                     {
                         dataTrain.SaveAsNumpy(strOutputPath, "train");

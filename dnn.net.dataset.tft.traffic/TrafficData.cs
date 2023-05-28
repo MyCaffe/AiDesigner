@@ -147,7 +147,7 @@ namespace DNN.net.dataset.tft.traffic
 
             for (int i = 0; i < rgDataSort.Count; i++)
             {
-                int nDayOfWeek = (int)rgDataSort[i].Item2;
+                int nSensorDay = (int)rgDataSort[i].Item2;
 
                 for (int j = 0; j < rgDataSort[i].Item3.Count; j++)
                 {
@@ -158,7 +158,7 @@ namespace DNN.net.dataset.tft.traffic
                         int nHour = k;
 
                         DateTime dt = dtStart.AddHours(nHour + i * 24);
-                        DataRecord rec = new DataRecord(nStationID, dt, nDayOfWeek, rgData[i][j][k], dtStart);
+                        DataRecord rec = new DataRecord(nStationID, dt, nSensorDay, rgData[i][j][k], dtStart);
                         m_data.Add(rec);
                     }
                 }
@@ -174,8 +174,7 @@ namespace DNN.net.dataset.tft.traffic
                 }
             }
 
-            // Normalize the data.
-            return m_data.Normalize(m_sw, m_log, m_evtCancel);
+            return true;
         }
 
         private List<float[]> loadFileList(string strFile, List<float[]> rgData = null, int nOffset = 0)
@@ -303,10 +302,10 @@ namespace DNN.net.dataset.tft.traffic
             return rgData;
         }
 
-        public bool NormalizeData()
+        public bool NormalizeData(Dictionary<DataRecord.FIELD, Tuple<double, double>> rgScalers)
         {
             m_sw.Restart();
-            return m_data.Normalize(m_sw, m_log, m_evtCancel);
+            return m_data.Normalize(m_sw, m_log, m_evtCancel, rgScalers);
         }
 
         public bool SaveAsNumpy(string strPath, string strSub)
@@ -468,7 +467,7 @@ namespace DNN.net.dataset.tft.traffic
                     tw.WriteStartElement("Field");
                         tw.WriteAttributeString("Index", "0");
                         tw.WriteAttributeString("DataType", "REAL");
-                        tw.WriteAttributeString("InputType", "OBSERVED,TARGET");
+                        tw.WriteAttributeString("InputType", "TARGET");
                         tw.WriteValue("value");
                     tw.WriteEndElement();
                 tw.WriteEndElement();
@@ -649,7 +648,7 @@ namespace DNN.net.dataset.tft.traffic
 
     public class DataRecord
     {
-        int m_nCustomerID;
+        int m_nStationID;
         DateTime m_dt;
         double[] m_rgFields = new double[5];
         double[] m_rgFieldsNormalized = new double[5];
@@ -663,13 +662,13 @@ namespace DNN.net.dataset.tft.traffic
             HOURS_FROM_START = 4
         }
 
-        public DataRecord(int nStationID, DateTime dt, int nDayOfWeek, double dfValue, DateTime dtStart)
+        public DataRecord(int nStationID, DateTime dt, int nSensorDay, double dfValue, DateTime dtStart)
         {
-            m_nCustomerID = nStationID;
+            m_nStationID = nStationID;
             m_dt = dt;
             m_rgFields[(int)FIELD.VALUE] = dfValue;
-            m_rgFields[(int)FIELD.SENSOR_DAY] = nDayOfWeek;
-            m_rgFields[(int)FIELD.TIME_ON_DAY] = dt.Hour + (dt.Minute / 60.0) + (dt.Second / 3600.0);
+            m_rgFields[(int)FIELD.SENSOR_DAY] = nSensorDay;
+            m_rgFields[(int)FIELD.TIME_ON_DAY] = dt.Hour * 60 * 60 + dt.Minute * 60 + dt.Second;
             m_rgFields[(int)FIELD.DAY_OF_WEEK] = (int)dt.DayOfWeek;
             m_rgFields[(int)FIELD.HOURS_FROM_START] = (m_dt - dtStart).TotalHours;
         }
@@ -681,7 +680,7 @@ namespace DNN.net.dataset.tft.traffic
 
         public int StationID
         {
-            get { return m_nCustomerID; }
+            get { return m_nStationID; }
         }
 
         public DateTime Date
@@ -876,33 +875,37 @@ namespace DNN.net.dataset.tft.traffic
             m_rgRecordsByStation.Clear();
         }
 
-        public bool Normalize(Stopwatch sw, Log log, CancelEvent evtCancel)
+        private void normalize(DataRecord.FIELD field, DataRecordCollection col, Dictionary<DataRecord.FIELD, Tuple<double, double>> rgScalers)
         {
-            sw.Restart();
+            double dfMean;
+            double dfStdev;
 
+            if (rgScalers.ContainsKey(field))
+            {
+                dfMean = rgScalers[field].Item1;
+                dfStdev = rgScalers[field].Item2;
+            }
+            else
+            {
+                col.CalculateStatistics(field, out dfMean, out dfStdev, true);
+                rgScalers.Add(field, new Tuple<double, double>(dfMean, dfStdev));
+            }
+
+            col.Normalize(field, dfMean, dfStdev);
+        }
+
+        public bool Normalize(Stopwatch sw, Log log, CancelEvent evtCancel, Dictionary<DataRecord.FIELD, Tuple<double, double>> rgScalers)
+        {
             int nIdx = 0;
+            sw.Restart();
 
             foreach (KeyValuePair<int, DataRecordCollection> kv in m_rgRecordsByStation)
             {
-                double dfMean;
-                double dfStdev;
-
-                kv.Value.SortByDate();
-
-                kv.Value.CalculateStatistics(DataRecord.FIELD.VALUE, out dfMean, out dfStdev, true);
-                kv.Value.Normalize(DataRecord.FIELD.VALUE, dfMean, dfStdev);
-
-                kv.Value.CalculateStatistics(DataRecord.FIELD.SENSOR_DAY, out dfMean, out dfStdev);
-                kv.Value.Normalize(DataRecord.FIELD.SENSOR_DAY, dfMean, dfStdev);
-
-                kv.Value.CalculateStatistics(DataRecord.FIELD.TIME_ON_DAY, out dfMean, out dfStdev);
-                kv.Value.Normalize(DataRecord.FIELD.TIME_ON_DAY, dfMean, dfStdev);
-
-                kv.Value.CalculateStatistics(DataRecord.FIELD.DAY_OF_WEEK, out dfMean, out dfStdev);
-                kv.Value.Normalize(DataRecord.FIELD.DAY_OF_WEEK, dfMean, dfStdev);
-
-                kv.Value.CalculateStatistics(DataRecord.FIELD.HOURS_FROM_START, out dfMean, out dfStdev);
-                kv.Value.Normalize(DataRecord.FIELD.HOURS_FROM_START, dfMean, dfStdev);
+                normalize(DataRecord.FIELD.VALUE, kv.Value, rgScalers);
+                normalize(DataRecord.FIELD.SENSOR_DAY, kv.Value, rgScalers);
+                normalize(DataRecord.FIELD.TIME_ON_DAY, kv.Value, rgScalers);
+                normalize(DataRecord.FIELD.DAY_OF_WEEK, kv.Value, rgScalers);
+                normalize(DataRecord.FIELD.HOURS_FROM_START, kv.Value, rgScalers);
 
                 if (sw.Elapsed.TotalMilliseconds > 1000)
                 {
