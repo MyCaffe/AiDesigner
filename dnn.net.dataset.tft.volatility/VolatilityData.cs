@@ -661,7 +661,7 @@ namespace DNN.net.dataset.tft.volatility
         {
             if (dt == null)
                 dt = m_dt;
-
+           
             DataRecord rec = new DataRecord();
             rec.m_nSymbolID = m_nSymbolID;
             rec.m_dt = dt.Value;
@@ -690,6 +690,7 @@ namespace DNN.net.dataset.tft.volatility
             rec.m_nDayOfMonth = dt.Value.Day - 1;
             rec.m_nMonth = dt.Value.Month - 1;
             rec.m_nWeekOfYear = dayOfYear(dt.Value);
+
             return rec;
         }
 
@@ -713,7 +714,9 @@ namespace DNN.net.dataset.tft.volatility
             string strSymbol = rgstr[1];
             symbols.Add(strSymbol);
 
-            rec.m_dt = DateTime.Parse(rgstr[0]);
+            DateTime dt = DateTime.Parse(rgstr[0]);
+
+            rec.m_dt = dt.ToUniversalTime();
             rec.m_nSymbolID = symbols.Add(strSymbol);
             rec.m_nRegionID = rgRegionMap[strSymbol];
             rec.m_dfOpenToClose = parse(rgstr[2]);
