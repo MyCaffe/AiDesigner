@@ -650,11 +650,11 @@ namespace DNN.net.dataset.tft.volatility
         {
         }
 
-        private static int dayOfYear(DateTime dt)
+        private static int weekOfYear(DateTime dt)
         {
             DateTime dt1 = new DateTime(dt.Year, 1, 1);
             TimeSpan ts = dt - dt1;
-            return ts.Days;
+            return ts.Days / 7;
         }
 
         public DataRecord Clone(DateTime? dt = null)
@@ -689,7 +689,7 @@ namespace DNN.net.dataset.tft.volatility
             rec.m_nDayOfWeek = (int)dt.Value.DayOfWeek;
             rec.m_nDayOfMonth = dt.Value.Day - 1;
             rec.m_nMonth = dt.Value.Month - 1;
-            rec.m_nWeekOfYear = dayOfYear(dt.Value);
+            rec.m_nWeekOfYear = weekOfYear(dt.Value);
 
             return rec;
         }
@@ -739,10 +739,10 @@ namespace DNN.net.dataset.tft.volatility
             rec.m_dfCloseTime = parse(rgstr[19]);
             rec.m_rgFields[(int)FIELD.LOG_VOL] = Math.Log(rec.m_dfRv5SS);
             rec.m_rgFields[(int)FIELD.OPEN_TO_CLOSE] = rec.m_dfOpenToClose;
-            rec.m_nDayOfMonth = rec.m_dt.Day;
+            rec.m_nDayOfMonth = rec.m_dt.Day - 1;
             rec.m_nDayOfWeek = (int)rec.m_dt.DayOfWeek;
-            rec.m_nWeekOfYear = dayOfYear(rec.m_dt);
-            rec.m_nMonth = rec.m_dt.Month;
+            rec.m_nWeekOfYear = weekOfYear(rec.m_dt);
+            rec.m_nMonth = rec.m_dt.Month - 1;
 
             return rec;
         }
