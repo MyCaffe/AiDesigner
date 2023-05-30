@@ -586,6 +586,13 @@ namespace DNN.net.dataset.tft.volatility
 
             double dfMean = dfTotal / nCount;
             double dfStdev = Math.Sqrt(m_rgItems.Sum(p => Math.Pow(p.Item(field) - dfMean, 2)) / nCount);
+
+            if (double.IsNaN(dfMean) || double.IsInfinity(dfMean))
+                throw new Exception("Invalid mean value for field '" + field.ToString() + "'.");
+
+            if (double.IsNaN(dfStdev) || double.IsInfinity(dfStdev))
+                throw new Exception("Invalid stdev value for field '" + field.ToString() + "'.");
+
             dfMean1 = dfMean;
             dfStdev1 = dfStdev;
         }
@@ -597,7 +604,7 @@ namespace DNN.net.dataset.tft.volatility
                 if (m_rgItems[i].IsValid)
                 {
                     double dfVal = m_rgItems[i].Item(dt);
-                    dfVal = (dfVal - dfMean) / dfStdev;
+                    dfVal = (dfStdev == 0) ? 0 : (dfVal - dfMean) / dfStdev;
                     m_rgItems[i].ItemNormalized(dt, dfVal);
                 }
             }
@@ -737,7 +744,12 @@ namespace DNN.net.dataset.tft.volatility
             rec.m_dfBv = parse(rgstr[17]);
             rec.m_dfOpenPrice = parse(rgstr[18]);
             rec.m_dfCloseTime = parse(rgstr[19]);
-            rec.m_rgFields[(int)FIELD.LOG_VOL] = Math.Log(rec.m_dfRv5SS);
+
+            double dfLogVol = Math.Log(rec.m_dfRv5SS);
+            if (double.IsNaN(dfLogVol) || double.IsInfinity(dfLogVol))
+                dfLogVol = 0;
+
+            rec.m_rgFields[(int)FIELD.LOG_VOL] = dfLogVol;
             rec.m_rgFields[(int)FIELD.OPEN_TO_CLOSE] = rec.m_dfOpenToClose;
             rec.m_nDayOfMonth = rec.m_dt.Day - 1;
             rec.m_nDayOfWeek = (int)rec.m_dt.DayOfWeek;
@@ -1089,7 +1101,7 @@ namespace DNN.net.dataset.tft.volatility
             m_rgRecordsBySymbol.Clear();
         }
 
-        private void normalize(DataRecord.FIELD field, DataRecordCollection col, Dictionary<DataRecord.FIELD, Tuple<double, double>> rgScalers)
+        private void normalize(DataRecord.FIELD field, DataRecordCollection col, Dictionary<DataRecord.FIELD, Tuple<double, double>> rgScalers, bool bNonZeroOnly = false)
         {
             double dfMean;
             double dfStdev;
@@ -1101,7 +1113,7 @@ namespace DNN.net.dataset.tft.volatility
             }
             else
             {
-                col.CalculateStatistics(field, out dfMean, out dfStdev, true);
+                col.CalculateStatistics(field, out dfMean, out dfStdev, bNonZeroOnly);
                 rgScalers.Add(field, new Tuple<double, double>(dfMean, dfStdev));
             }
 
@@ -1123,7 +1135,7 @@ namespace DNN.net.dataset.tft.volatility
 
                 rgScalers1 = rgScalers[kv.Key];
 
-                normalize(DataRecord.FIELD.LOG_VOL, kv.Value, rgScalers1);
+                normalize(DataRecord.FIELD.LOG_VOL, kv.Value, rgScalers1, true);
                 normalize(DataRecord.FIELD.OPEN_TO_CLOSE, kv.Value, rgScalers1);
                 normalize(DataRecord.FIELD.DAYS_FROM_START, kv.Value, rgScalers1);
 
