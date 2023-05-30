@@ -116,7 +116,7 @@ namespace DNN.net.dataset.tft.electricity
             return true;
         }
 
-        public bool NormalizeData(Dictionary<DataRecord.FIELD, Tuple<double, double>> rgScalers)
+        public bool NormalizeData(Dictionary<int, Dictionary<DataRecord.FIELD, Tuple<double, double>>> rgScalers)
         {
             return m_data.Normalize(m_sw, m_log, m_evtCancel, rgScalers);
         }
@@ -766,7 +766,7 @@ namespace DNN.net.dataset.tft.electricity
             col.Normalize(field, dfMean, dfStdev);
         }
 
-        public bool Normalize(Stopwatch sw, Log log, CancelEvent evtCancel, Dictionary<DataRecord.FIELD, Tuple<double, double>> rgScalers)
+        public bool Normalize(Stopwatch sw, Log log, CancelEvent evtCancel, Dictionary<int, Dictionary<DataRecord.FIELD, Tuple<double, double>>> rgScalers)
         {
             sw.Restart();
 
@@ -774,9 +774,16 @@ namespace DNN.net.dataset.tft.electricity
 
             foreach (KeyValuePair<int, DataRecordCollection> kv in m_rgRecordsByCustomer)
             {
-                normalize(DataRecord.FIELD.LOG_POWER_USAGE, kv.Value, rgScalers);
-                normalize(DataRecord.FIELD.HOUR, kv.Value, rgScalers);
-                normalize(DataRecord.FIELD.HOURS_FROM_START, kv.Value, rgScalers);
+                Dictionary<DataRecord.FIELD, Tuple<double, double>> rgScalers1;
+
+                if (!rgScalers.ContainsKey(kv.Key))
+                    rgScalers.Add(kv.Key, new Dictionary<DataRecord.FIELD, Tuple<double, double>>());
+
+                rgScalers1 = rgScalers[kv.Key];
+
+                normalize(DataRecord.FIELD.LOG_POWER_USAGE, kv.Value, rgScalers1);
+                normalize(DataRecord.FIELD.HOUR, kv.Value, rgScalers1);
+                normalize(DataRecord.FIELD.HOURS_FROM_START, kv.Value, rgScalers1);
 
                 if (sw.Elapsed.TotalMilliseconds > 1000)
                 {
