@@ -302,9 +302,8 @@ namespace DNN.net.dataset.tft.traffic
             return rgData;
         }
 
-        public bool NormalizeData(Dictionary<DataRecord.FIELD, Tuple<double, double>> rgScalers)
+        public bool NormalizeData(Dictionary<int, Dictionary<DataRecord.FIELD, Tuple<double, double>>> rgScalers)
         {
-            m_sw.Restart();
             return m_data.Normalize(m_sw, m_log, m_evtCancel, rgScalers);
         }
 
@@ -675,7 +674,7 @@ namespace DNN.net.dataset.tft.traffic
 
         public bool IsValid
         {
-            get { return (Value > 0) ? true : false; }
+            get { return (Value != 0) ? true : false; }
         }
 
         public int StationID
@@ -894,18 +893,25 @@ namespace DNN.net.dataset.tft.traffic
             col.Normalize(field, dfMean, dfStdev);
         }
 
-        public bool Normalize(Stopwatch sw, Log log, CancelEvent evtCancel, Dictionary<DataRecord.FIELD, Tuple<double, double>> rgScalers)
+        public bool Normalize(Stopwatch sw, Log log, CancelEvent evtCancel, Dictionary<int, Dictionary<DataRecord.FIELD, Tuple<double, double>>> rgScalers)
         {
             int nIdx = 0;
             sw.Restart();
 
             foreach (KeyValuePair<int, DataRecordCollection> kv in m_rgRecordsByStation)
             {
-                normalize(DataRecord.FIELD.VALUE, kv.Value, rgScalers);
-                normalize(DataRecord.FIELD.SENSOR_DAY, kv.Value, rgScalers);
-                normalize(DataRecord.FIELD.TIME_ON_DAY, kv.Value, rgScalers);
-                normalize(DataRecord.FIELD.DAY_OF_WEEK, kv.Value, rgScalers);
-                normalize(DataRecord.FIELD.HOURS_FROM_START, kv.Value, rgScalers);
+                Dictionary<DataRecord.FIELD, Tuple<double, double>> rgScalers1;
+
+                if (!rgScalers.ContainsKey(kv.Key))
+                    rgScalers.Add(kv.Key, new Dictionary<DataRecord.FIELD, Tuple<double, double>>());
+
+                rgScalers1 = rgScalers[kv.Key];
+
+                normalize(DataRecord.FIELD.VALUE, kv.Value, rgScalers1);
+                normalize(DataRecord.FIELD.SENSOR_DAY, kv.Value, rgScalers1);
+                normalize(DataRecord.FIELD.TIME_ON_DAY, kv.Value, rgScalers1);
+                normalize(DataRecord.FIELD.DAY_OF_WEEK, kv.Value, rgScalers1);
+                normalize(DataRecord.FIELD.HOURS_FROM_START, kv.Value, rgScalers1);
 
                 if (sw.Elapsed.TotalMilliseconds > 1000)
                 {
