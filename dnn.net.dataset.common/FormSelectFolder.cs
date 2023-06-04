@@ -41,10 +41,17 @@ namespace DNN.net.dataset.common
 
         private void timerUI_Tick(object sender, EventArgs e)
         {
-            if (Directory.Exists(edtFolder.Text))
-                btnOK.Enabled = true;
-            else
+            try
+            {
+                if (Directory.Exists(edtFolder.Text))
+                    btnOK.Enabled = true;
+                else
+                    btnOK.Enabled = false;
+            }
+            catch (Exception excpt)
+            {
                 btnOK.Enabled = false;
+            }
         }
 
         private void btnOK_Click(object sender, EventArgs e)
