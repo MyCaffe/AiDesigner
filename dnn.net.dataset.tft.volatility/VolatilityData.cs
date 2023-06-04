@@ -513,31 +513,36 @@ namespace DNN.net.dataset.tft.volatility
 
             List<DataRecord> rgItems = new List<DataRecord>();
             int nSrcIdx = 0;
+            int nIdx = 0;
 
-            for (int i = 0; i < rg.Count; i++)
+            while (nIdx < rg.Count)
             {
-                DateTime dt = rg[i];
+                DateTime dt = rg[nIdx];
 
                 if (nSrcIdx < m_rgItems.Count)
                 {
-                    if (dt < m_rgItems[nSrcIdx].Date)
-                        rgItems.Add(m_rgItems[nSrcIdx].Clone(dt));
-                    else
+                    while (dt < m_rgItems[nSrcIdx].Date)
                     {
-                        if (nValidStart == -1)
-                            nValidStart = i;
-
-                        rgItems.Add(m_rgItems[nSrcIdx].Clone());
+                        rgItems.Add(m_rgItems[nSrcIdx].Clone(dt));
+                        nIdx++;
+                        dt = rg[nIdx];
                     }
+
+                    if (nValidStart == -1)
+                        nValidStart = nIdx;
+
+                    rgItems.Add(m_rgItems[nSrcIdx].Clone());
                     nSrcIdx++;
                 }
                 else
                 {
                     if (nValidEnd == -1)
-                        nValidEnd = i;
+                        nValidEnd = nIdx;
 
                     rgItems.Add(m_rgItems[m_rgItems.Count - 1].Clone(dt));
                 }
+
+                nIdx++;
             }
 
             if (nValidEnd == -1)
