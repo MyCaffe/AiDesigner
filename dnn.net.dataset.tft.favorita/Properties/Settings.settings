@@ -1,0 +1,42 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="DNN.net.dataset.tft.favorita.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="HolidaysDataFile" Type="System.String" Scope="User">
+      <Value Profile="(Default)">holidays_events.csv</Value>
+    </Setting>
+    <Setting Name="ItemsDataFile" Type="System.String" Scope="User">
+      <Value Profile="(Default)">items.csv</Value>
+    </Setting>
+    <Setting Name="OilDataFile" Type="System.String" Scope="User">
+      <Value Profile="(Default)">oil.csv</Value>
+    </Setting>
+    <Setting Name="SampleSubmissionDataFile" Type="System.String" Scope="User">
+      <Value Profile="(Default)">sample_submission.csv</Value>
+    </Setting>
+    <Setting Name="TestDataFile" Type="System.String" Scope="User">
+      <Value Profile="(Default)">test.csv</Value>
+    </Setting>
+    <Setting Name="TrainDataFile" Type="System.String" Scope="User">
+      <Value Profile="(Default)">train.csv</Value>
+    </Setting>
+    <Setting Name="TransactionsDataFile" Type="System.String" Scope="User">
+      <Value Profile="(Default)">transactions.csv</Value>
+    </Setting>
+    <Setting Name="StoresDataFile" Type="System.String" Scope="User">
+      <Value Profile="(Default)">stores.csv</Value>
+    </Setting>
+    <Setting Name="OutputPath" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="StartDate" Type="System.String" Scope="User">
+      <Value Profile="(Default)">1/1/2015</Value>
+    </Setting>
+    <Setting Name="EndDate" Type="System.String" Scope="User">
+      <Value Profile="(Default)">6/1/2016</Value>
+    </Setting>
+    <Setting Name="OutputType" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">1</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>

@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("DNN.net.dataset.tft.traffic")]
+[assembly: AssemblyTitle("DNN.net.dataset.tft.favorita")]
 [assembly: AssemblyDescription("Making artificial intelligence easy!")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("SignalPop LLC")]
-[assembly: AssemblyProduct("DNN.net.dataset.tft.traffic")]
+[assembly: AssemblyProduct("DNN.net.dataset.tft.favorita")]
 [assembly: AssemblyCopyright("Copyright ©  2023 SignalPop LLC. All rights reserved.")]
 [assembly: AssemblyTrademark("SignalPop")]
 [assembly: AssemblyCulture("")]
