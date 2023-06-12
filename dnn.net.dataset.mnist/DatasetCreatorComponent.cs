@@ -16,7 +16,7 @@ namespace DNN.net.dataset.mnist
         IXDatasetCreatorProgress m_iprogress = null;
         DatasetFactory m_factory = new DatasetFactory();
         bool m_bCancel = false;
-        IMGDB_VERSION m_imgDbVer = IMGDB_VERSION.DEFAULT;
+        DB_VERSION m_dbVer = DB_VERSION.DEFAULT;
 
         public DatasetCreatorComponent()
         {
@@ -35,10 +35,10 @@ namespace DNN.net.dataset.mnist
             get { return "MNIST"; }
         }
 
-        public IMGDB_VERSION ImageDbVersion
+        public DB_VERSION DbVersion
         {
-            get { return m_imgDbVer; }
-            set { m_imgDbVer = value; }
+            get { return m_dbVer; }
+            set { m_dbVer = value; }
         }
 
         public void QueryConfiguration(DatasetConfiguration config)

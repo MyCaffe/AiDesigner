@@ -54,7 +54,7 @@ namespace DNN.net.dataset.common
     public interface IXDatasetCreator
     {
         string Name { get; }
-        IMGDB_VERSION ImageDbVersion { get; set; }
+        DB_VERSION DbVersion { get; set; }
         void QueryConfiguration(DatasetConfiguration config);        
         void Create(DatasetConfiguration config, IXDatasetCreatorProgress progress);
     }
