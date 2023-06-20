@@ -1,5 +1,6 @@
 ﻿using MyCaffe.basecode;
 using MyCaffe.common;
+using MyCaffe.db.temporal;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -165,6 +166,83 @@ namespace DNN.net.dataset.tft.volatility
         public bool NormalizeData(Dictionary<int, Dictionary<DataRecord.FIELD, Tuple<double, double>>> rgScalers)
         {
             return m_data.Normalize(m_sw, m_log, m_evtCancel, rgScalers);
+        }
+
+        public int SaveAsSql(string strName, string strSub)
+        {
+            DatabaseTemporal db = new DatabaseTemporal();
+            Stopwatch sw = new Stopwatch();
+
+            sw.Start();
+
+            int nIdx = 0;
+            int nTotal = m_data.RecordsBySymbol.Sum(p => p.Value.Items.Count);
+            int nSrcID = db.AddSource(strName + "." + strSub, m_rgSymbolToRegionMap.Count, m_data.RecordsPerSymbol, 3, true);
+
+            foreach (KeyValuePair<int, DataRecordCollection> kv in m_data.RecordsBySymbol)
+            {
+                int nSymbolID = kv.Key;
+                string strSymbol = m_symbols.GetItem(nSymbolID);
+                int nRegionID = m_rgSymbolToRegionMap[strSymbol];
+                string strRegion = m_region.GetItem(nRegionID);
+                int nItemID = db.AddValueItem(nSrcID, strRegion);
+
+                DateTime dtStart = kv.Value.Items.Min(p => p.Date);
+                DateTime dtEnd = kv.Value.Items.Max(p => p.Date);
+
+                int nStreamID_logvol = db.AddObservedValueStream(nSrcID, nItemID, "Log Volume", DatabaseTemporal.STREAM_VALUE_TYPE.NUMERIC, 1, dtStart, dtEnd, 60 * 60);
+                int nStreamID_opentoclose = db.AddKnownValueStream(nSrcID, nItemID, "Open to Close", DatabaseTemporal.STREAM_VALUE_TYPE.NUMERIC, 2, dtStart, dtEnd, 60 * 60);
+                int nStreamID_daysfromstart = db.AddKnownValueStream(nSrcID, nItemID, "Days from Start", DatabaseTemporal.STREAM_VALUE_TYPE.NUMERIC, 3, dtStart, dtEnd, 60 * 60);
+                int nStreamID_dayofweek = db.AddKnownValueStream(nSrcID, nItemID, "Day of Week", DatabaseTemporal.STREAM_VALUE_TYPE.CATEGORICAL, 4, dtStart, dtEnd, 60 * 60);
+                int nStreamID_dayofmonth = db.AddKnownValueStream(nSrcID, nItemID, "Day of Month", DatabaseTemporal.STREAM_VALUE_TYPE.CATEGORICAL, 5, dtStart, dtEnd, 60 * 60);
+                int nStreamID_weekofyear = db.AddKnownValueStream(nSrcID, nItemID, "Week of Year", DatabaseTemporal.STREAM_VALUE_TYPE.CATEGORICAL, 6, dtStart, dtEnd, 60 * 60);
+                int nStreamID_month = db.AddKnownValueStream(nSrcID, nItemID, "Month", DatabaseTemporal.STREAM_VALUE_TYPE.NUMERIC, 7, dtStart, dtEnd, 60 * 60);
+                int nStreamID_regionid = db.AddStaticValueStream(nSrcID, nItemID, "Region ID", DatabaseTemporal.STREAM_VALUE_TYPE.CATEGORICAL, 8);
+
+                db.Open(nSrcID);
+                db.EnableBulk(true);
+
+                db.PutRawValue(nSrcID, nItemID, nStreamID_regionid, nRegionID);
+
+                foreach (DataRecord rec in kv.Value.Items)
+                {
+                    DateTime dt = rec.Date;
+
+                    db.PutRawValue(nSrcID, nItemID, nStreamID_logvol, dt, (float)rec.LogVol, (float)rec.NormalizedLogVol, m_log);
+                    db.PutRawValue(nSrcID, nItemID, nStreamID_opentoclose, dt, (float)rec.OpenToClose, (float)rec.NormalizedOpenToClose, m_log);
+                    db.PutRawValue(nSrcID, nItemID, nStreamID_daysfromstart, dt, (float)rec.DaysFromStart, (float)rec.NormalizedDaysFromStart, m_log);
+                    db.PutRawValue(nSrcID, nItemID, nStreamID_dayofweek, dt, (float)rec.DayOfWeek, (float)rec.DayOfWeek, m_log);
+                    db.PutRawValue(nSrcID, nItemID, nStreamID_dayofmonth, dt, (float)rec.DayOfMonth, (float)rec.DayOfMonth, m_log);
+                    db.PutRawValue(nSrcID, nItemID, nStreamID_weekofyear, dt, (float)rec.WeekOfYear, (float)rec.WeekOfYear, m_log);
+                    db.PutRawValue(nSrcID, nItemID, nStreamID_month, dt, (float)rec.Month, (float)rec.Month, m_log);
+
+                    nIdx++;
+
+                    if (nIdx % 1000 == 0)
+                        db.SaveRawValues();
+
+                    if (sw.Elapsed.TotalMilliseconds > 1000)
+                    {
+                        sw.Restart();
+
+                        if (m_evtCancel.WaitOne(0))
+                            break;
+
+                        double dfPct = (double)nIdx / (double)nTotal;
+                        m_log.WriteLine("Symbol = " + strSymbol + " (" + strRegion + ") - Saving '" + strSub + "' data to sql at " + dfPct.ToString("P") + " complete.");
+                    }
+                }
+
+                db.SaveRawValues();
+                db.UpdateStreamCounts(nItemID, nStreamID_logvol, nStreamID_opentoclose, nStreamID_daysfromstart, nStreamID_dayofweek, nStreamID_dayofmonth, nStreamID_weekofyear, nStreamID_month);
+
+                db.Close();
+
+                if (m_evtCancel.WaitOne(0))
+                    break;
+            }
+
+            return nSrcID;
         }
 
         public bool SaveAsNumpy(string strPath, string strSub)
