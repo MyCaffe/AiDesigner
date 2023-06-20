@@ -1,5 +1,7 @@
 ﻿using MyCaffe.basecode;
 using MyCaffe.common;
+using MyCaffe.db.temporal;
+using SimpleGraphing;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -121,6 +123,73 @@ namespace DNN.net.dataset.tft.electricity
             return m_data.Normalize(m_sw, m_log, m_evtCancel, rgScalers);
         }
 
+        public int SaveAsSql(string strName, string strSub)
+        {
+            DatabaseTemporal db = new DatabaseTemporal();
+            Stopwatch sw = new Stopwatch();
+
+            sw.Start();
+
+            int nIdx = 0;
+            int nTotal = m_data.RecordsByCustomer.Sum(p => p.Value.Items.Count);
+            int nSrcID = db.AddSource(strName + "." + strSub, m_rgCustomers.Count, m_data.RecordsPerCustomer, 3, true);
+
+            foreach (KeyValuePair<int, DataRecordCollection> kv in m_data.RecordsByCustomer)
+            {
+                int nCustomerID = kv.Key;
+                string strCustomer = m_rgCustomers[nCustomerID];
+                int nItemID = db.AddValueItem(nSrcID, strCustomer);
+
+                DateTime dtStart = new DateTime(2017, 1, 1);
+                DateTime dtEnd = dtStart + TimeSpan.FromHours(kv.Value.Items.Last().HoursFromStart);
+
+                int nStreamID_logpoweruseage = db.AddObservedValueStream(nSrcID, nItemID, "Log Power Usage", DatabaseTemporal.STREAM_VALUE_TYPE.NUMERIC, 1, dtStart, dtEnd, 60 * 60);
+                int nStreamID_hour = db.AddKnownValueStream(nSrcID, nItemID, "Hour", DatabaseTemporal.STREAM_VALUE_TYPE.NUMERIC, 2, dtStart, dtEnd, 60 * 60);
+                int nStreamID_hourfromstart = db.AddKnownValueStream(nSrcID, nItemID, "Hour from Start", DatabaseTemporal.STREAM_VALUE_TYPE.NUMERIC, 3, dtStart, dtEnd, 60 * 60);
+                int nStreamID_customerid = db.AddStaticValueStream(nSrcID, nItemID, "Customer ID", DatabaseTemporal.STREAM_VALUE_TYPE.CATEGORICAL, 4);
+
+                db.Open(nSrcID);
+                db.EnableBulk(true);
+
+                db.PutRawValue(nSrcID, nItemID, nStreamID_customerid, nCustomerID);
+
+                foreach (DataRecord rec in kv.Value.Items)
+                {
+                    DateTime dt = dtStart + TimeSpan.FromHours(rec.HoursFromStart);
+
+                    db.PutRawValue(nSrcID, nItemID, nStreamID_logpoweruseage, dt, (float)rec.LogPowerUsage, (float)rec.NormalizedLogPowerUsage, m_log);
+                    db.PutRawValue(nSrcID, nItemID, nStreamID_hour, dt, (float)rec.Hour, (float)rec.NormalizedHour, m_log);
+                    db.PutRawValue(nSrcID, nItemID, nStreamID_hourfromstart, dt, (float)rec.HoursFromStart, (float)rec.NormalizedHourFromStart, m_log);
+
+                    nIdx++;
+
+                    if (nIdx % 3000 == 0)
+                        db.SaveRawValues();
+
+                    if (sw.Elapsed.TotalMilliseconds > 1000)
+                    {
+                        sw.Restart();
+
+                        if (m_evtCancel.WaitOne(0))
+                            break;
+
+                        double dfPct = (double)nIdx / (double)nTotal;
+                        m_log.WriteLine("Customer = " + strCustomer + " - Saving data to sql at " + dfPct.ToString("P") + " complete.");
+                    }
+                }
+
+                db.SaveRawValues();
+                db.UpdateStreamCounts(nItemID, nStreamID_logpoweruseage, nStreamID_hour, nStreamID_hourfromstart);
+
+                db.Close();
+
+                if (m_evtCancel.WaitOne(0))
+                    break;
+            }
+
+            return nSrcID;
+        }
+
         public bool SaveAsNumpy(string strPath, string strSub)
         {
             string strPath1 = strPath + "\\preprocessed";
@@ -129,19 +198,19 @@ namespace DNN.net.dataset.tft.electricity
                 Directory.CreateDirectory(strPath1);
 
             m_log.WriteLine("Saving sync data to numpy files...");
-            if (!saveSyncFile(strPath1, strSub))
+            if (!saveSyncToNumpyFile(strPath1, strSub))
                 return false;
 
             m_log.WriteLine("Saving observed numeric data to numpy files...");
-            if (!saveObservedNumericFile(strPath1, strSub))
+            if (!saveObservedNumericToNumpyFile(strPath1, strSub))
                 return false;
 
             m_log.WriteLine("Saving known numeric data to numpy files...");
-            if (!saveKnownNumericFile(strPath1, strSub))
+            if (!saveKnownNumericToNumpyFile(strPath1, strSub))
                 return false;
 
             m_log.WriteLine("Saving static categorical data to numpy files...");
-            if (!saveStaticCategoricalFile(strPath1, strSub))
+            if (!saveStaticCategoricalToNumpyFile(strPath1, strSub))
                 return false;
 
             m_log.WriteLine("Saving schema file...");
@@ -151,7 +220,7 @@ namespace DNN.net.dataset.tft.electricity
             return false;
         }
 
-        private bool saveSyncFile(string strPath, string strSub)
+        private bool saveSyncToNumpyFile(string strPath, string strSub)
         {
             int nCustomers = m_rgCustomers.Count;
             int nRecords = m_data.RecordsPerCustomer;
@@ -178,7 +247,7 @@ namespace DNN.net.dataset.tft.electricity
             return true;
         }
 
-        private bool saveObservedNumericFile(string strPath, string strSub)
+        private bool saveObservedNumericToNumpyFile(string strPath, string strSub)
         {
             int nCustomers = m_rgCustomers.Count;
             int nRecords = m_data.RecordsPerCustomer;
@@ -204,7 +273,7 @@ namespace DNN.net.dataset.tft.electricity
             return true;
         }
 
-        private bool saveKnownNumericFile(string strPath, string strSub)
+        private bool saveKnownNumericToNumpyFile(string strPath, string strSub)
         {
             int nCustomers = m_rgCustomers.Count;
             int nRecords = m_data.RecordsPerCustomer;
@@ -231,7 +300,7 @@ namespace DNN.net.dataset.tft.electricity
             return true;
         }
 
-        private bool saveStaticCategoricalFile(string strPath, string strSub)
+        private bool saveStaticCategoricalToNumpyFile(string strPath, string strSub)
         {
             int nCustomers = m_rgCustomers.Count;
             int nFields = 1;

@@ -10,6 +10,7 @@ using DNN.net.dataset.common;
 using System.IO;
 using MyCaffe.data;
 using System.Threading;
+using MyCaffe.db.temporal;
 
 namespace DNN.net.dataset.tft.electricity
 {
@@ -29,7 +30,8 @@ namespace DNN.net.dataset.tft.electricity
         public enum OUTPUT_TYPE
         {
             CSV,
-            NPY
+            NPY,
+            SQL
         }
 
         public DatasetCreatorComponent()
@@ -84,7 +86,7 @@ namespace DNN.net.dataset.tft.electricity
             config.Settings.Add(new DataConfigSetting("Train Split", Properties.Settings.Default.TrainingSplitPct, DataConfigSetting.TYPE.REAL));
             config.Settings.Add(new DataConfigSetting("Test Split", Properties.Settings.Default.TestingSplitPct, DataConfigSetting.TYPE.REAL));
             config.Settings.Add(new DataConfigSetting("Validation Split", Properties.Settings.Default.ValidSplitPct, DataConfigSetting.TYPE.REAL));
-            addList(config, "Output Format", outType, OUTPUT_TYPE.CSV, OUTPUT_TYPE.NPY);
+            addList(config, "Output Format", outType, OUTPUT_TYPE.CSV, OUTPUT_TYPE.NPY, OUTPUT_TYPE.SQL);
         }
 
         public void Create(DatasetConfiguration config, IXDatasetCreatorProgress progress)
@@ -116,8 +118,11 @@ namespace DNN.net.dataset.tft.electricity
 
             try
             {
-                if (!Directory.Exists(strOutputPath))
-                    throw new Exception("Could not find the output path '" + strOutputPath + "'.");
+                if (outType != OUTPUT_TYPE.SQL)
+                {
+                    if (!Directory.Exists(strOutputPath))
+                        throw new Exception("Could not find the output path '" + strOutputPath + "'.");
+                }
 
                 if (!File.Exists(strDataFile))
                     throw new Exception("Could not find the data file '" + strDataFile + "'.");
@@ -137,14 +142,26 @@ namespace DNN.net.dataset.tft.electricity
                     dataTest.NormalizeData(rgScalers);
                     dataVal.NormalizeData(rgScalers);
 
-                    if (outType == OUTPUT_TYPE.NPY)
+                    switch (outType)
                     {
-                        dataTrain.SaveAsNumpy(strOutputPath, "train");
-                        dataTest.SaveAsNumpy(strOutputPath, "test");
-                        dataVal.SaveAsNumpy(strOutputPath, "validation");
+                        case OUTPUT_TYPE.NPY:
+                            dataTrain.SaveAsNumpy(strOutputPath, "train");
+                            dataTest.SaveAsNumpy(strOutputPath, "test");
+                            dataVal.SaveAsNumpy(strOutputPath, "validation");
+                            break;
+
+                        case OUTPUT_TYPE.SQL:
+                            DatabaseTemporal db = new DatabaseTemporal();
+                            db.DeleteDataset(Name, false, log, m_evtCancel);
+                            int nTrainSrcID = dataTrain.SaveAsSql(Name, "train");
+                            int nTestSrcID = dataTest.SaveAsSql(Name, "test");
+                            //dataVal.SaveAsSql(Name, "validation");
+                            db.AddDataset(config.ID, Name, nTestSrcID, nTrainSrcID, 0, 0, null, false);
+                            break;
+
+                        default:
+                            throw new Exception("Unknown output type '" + outType.ToString() + "'.");
                     }
-                    else
-                        throw new Exception("Unknown output type '" + outType.ToString() + "'.");
                 }
             }
             catch (Exception excpt)
