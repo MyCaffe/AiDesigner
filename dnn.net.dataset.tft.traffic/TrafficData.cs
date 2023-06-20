@@ -1,5 +1,6 @@
 ﻿using MyCaffe.basecode;
 using MyCaffe.common;
+using MyCaffe.db.temporal;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -305,6 +306,77 @@ namespace DNN.net.dataset.tft.traffic
         public bool NormalizeData(Dictionary<int, Dictionary<DataRecord.FIELD, Tuple<double, double>>> rgScalers)
         {
             return m_data.Normalize(m_sw, m_log, m_evtCancel, rgScalers);
+        }
+
+        public int SaveAsSql(string strName, string strSub)
+        {
+            DatabaseTemporal db = new DatabaseTemporal();
+            Stopwatch sw = new Stopwatch();
+
+            sw.Start();
+
+            int nIdx = 0;
+            int nTotal = m_data.RecordsByCustomer.Sum(p => p.Value.Items.Count);
+            int nSrcID = db.AddSource(strName + "." + strSub, m_rgStations.Count, m_data.RecordsPerCustomer, 3, true);
+
+            foreach (KeyValuePair<int, DataRecordCollection> kv in m_data.RecordsByCustomer)
+            {
+                int nStationID = kv.Key;
+                string strStation = m_rgStations[nStationID];
+                int nItemID = db.AddValueItem(nSrcID, strStation);
+
+                DateTime dtStart = new DateTime(2017, 1, 1);
+                DateTime dtEnd = dtStart + TimeSpan.FromHours(kv.Value.Items.Last().HoursFromStart);
+
+                int nStreamID_value = db.AddObservedValueStream(nSrcID, nItemID, "Value", DatabaseTemporal.STREAM_VALUE_TYPE.NUMERIC, 1, dtStart, dtEnd, 60 * 60);
+                int nStreamID_sensorday = db.AddKnownValueStream(nSrcID, nItemID, "Sensor Day", DatabaseTemporal.STREAM_VALUE_TYPE.NUMERIC, 2, dtStart, dtEnd, 60 * 60);
+                int nStreamID_timeonday = db.AddKnownValueStream(nSrcID, nItemID, "Time on Day", DatabaseTemporal.STREAM_VALUE_TYPE.NUMERIC, 2, dtStart, dtEnd, 60 * 60);
+                int nStreamID_dayofweek = db.AddKnownValueStream(nSrcID, nItemID, "Day of Week", DatabaseTemporal.STREAM_VALUE_TYPE.NUMERIC, 2, dtStart, dtEnd, 60 * 60);
+                int nStreamID_hourfromstart = db.AddKnownValueStream(nSrcID, nItemID, "Hour from Start", DatabaseTemporal.STREAM_VALUE_TYPE.NUMERIC, 3, dtStart, dtEnd, 60 * 60);
+                int nStreamID_stationid = db.AddStaticValueStream(nSrcID, nItemID, "Station ID", DatabaseTemporal.STREAM_VALUE_TYPE.CATEGORICAL, 4);
+
+                db.Open(nSrcID);
+                db.EnableBulk(true);
+
+                db.PutRawValue(nSrcID, nItemID, nStreamID_stationid, nStationID);
+
+                foreach (DataRecord rec in kv.Value.Items)
+                {
+                    DateTime dt = dtStart + TimeSpan.FromHours(rec.HoursFromStart);
+
+                    db.PutRawValue(nSrcID, nItemID, nStreamID_value, dt, (float)rec.Value, (float)rec.NormalizedValue, m_log);
+                    db.PutRawValue(nSrcID, nItemID, nStreamID_sensorday, dt, (float)rec.SensorDay, (float)rec.NormalizedSensorDay, m_log);
+                    db.PutRawValue(nSrcID, nItemID, nStreamID_timeonday, dt, (float)rec.TimeOnDay, (float)rec.NormalizedTimeOnDay, m_log);
+                    db.PutRawValue(nSrcID, nItemID, nStreamID_dayofweek, dt, (float)rec.DayOfWeek, (float)rec.NormalizedDayOfWeek, m_log);
+                    db.PutRawValue(nSrcID, nItemID, nStreamID_hourfromstart, dt, (float)rec.HoursFromStart, (float)rec.NormalizedHourFromStart, m_log);
+
+                    nIdx++;
+
+                    if (nIdx % 3000 == 0)
+                        db.SaveRawValues();
+
+                    if (sw.Elapsed.TotalMilliseconds > 1000)
+                    {
+                        sw.Restart();
+
+                        if (m_evtCancel.WaitOne(0))
+                            break;
+
+                        double dfPct = (double)nIdx / (double)nTotal;
+                        m_log.WriteLine("Customer = " + strStation + " - Saving '" + strSub + "' data to sql at " + dfPct.ToString("P") + " complete.");
+                    }
+                }
+
+                db.SaveRawValues();
+                db.UpdateStreamCounts(nItemID, nStreamID_value, nStreamID_sensorday, nStreamID_timeonday, nStreamID_dayofweek, nStreamID_hourfromstart);
+
+                db.Close();
+
+                if (m_evtCancel.WaitOne(0))
+                    break;
+            }
+
+            return nSrcID;
         }
 
         public bool SaveAsNumpy(string strPath, string strSub)
