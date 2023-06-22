@@ -1,4 +1,5 @@
 ﻿using MyCaffe.basecode;
+using MyCaffe.basecode.descriptors;
 using MyCaffe.common;
 using MyCaffe.db.temporal;
 using SimpleGraphing;
@@ -52,6 +53,7 @@ namespace DNN.net.dataset.tft.electricity
             FileInfo fi = new FileInfo(m_strDataFile);
             long lTotalLen = fi.Length;
             long lIdx = 0;
+            long lLineNo = 0;
 
             m_sw.Restart();
 
@@ -95,6 +97,7 @@ namespace DNN.net.dataset.tft.electricity
                     }
 
                     strLine = sr.ReadLine();
+                    lLineNo++;
 
                     if (m_sw.Elapsed.TotalMilliseconds > 1000)
                     {
@@ -127,12 +130,12 @@ namespace DNN.net.dataset.tft.electricity
         {
             DatabaseTemporal db = new DatabaseTemporal();
             Stopwatch sw = new Stopwatch();
-
+            
             sw.Start();
 
             int nIdx = 0;
             int nTotal = m_data.RecordsByCustomer.Sum(p => p.Value.Items.Count);
-            int nSrcID = db.AddSource(strName + "." + strSub, m_rgCustomers.Count, m_data.RecordsPerCustomer, 3, true);
+            int nSrcID = db.AddSource(strName + "." + strSub, m_rgCustomers.Count, 3, m_data.RecordsPerCustomer, true);
 
             foreach (KeyValuePair<int, DataRecordCollection> kv in m_data.RecordsByCustomer)
             {
@@ -143,10 +146,10 @@ namespace DNN.net.dataset.tft.electricity
                 DateTime dtStart = new DateTime(2017, 1, 1);
                 DateTime dtEnd = dtStart + TimeSpan.FromHours(kv.Value.Items.Last().HoursFromStart);
 
-                int nStreamID_logpoweruseage = db.AddObservedValueStream(nSrcID, nItemID, "Log Power Usage", DatabaseTemporal.STREAM_VALUE_TYPE.NUMERIC, 1, dtStart, dtEnd, 60 * 60);
-                int nStreamID_hour = db.AddKnownValueStream(nSrcID, nItemID, "Hour", DatabaseTemporal.STREAM_VALUE_TYPE.NUMERIC, 2, dtStart, dtEnd, 60 * 60);
-                int nStreamID_hourfromstart = db.AddKnownValueStream(nSrcID, nItemID, "Hour from Start", DatabaseTemporal.STREAM_VALUE_TYPE.NUMERIC, 3, dtStart, dtEnd, 60 * 60);
-                int nStreamID_customerid = db.AddStaticValueStream(nSrcID, nItemID, "Customer ID", DatabaseTemporal.STREAM_VALUE_TYPE.CATEGORICAL, 4);
+                int nStreamID_logpoweruseage = db.AddObservedValueStream(nSrcID, nItemID, "Log Power Usage", ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, 1, dtStart, dtEnd, 60 * 60);
+                int nStreamID_hour = db.AddKnownValueStream(nSrcID, nItemID, "Hour", ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, 2, dtStart, dtEnd, 60 * 60);
+                int nStreamID_hourfromstart = db.AddKnownValueStream(nSrcID, nItemID, "Hour from Start", ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, 3, dtStart, dtEnd, 60 * 60);
+                int nStreamID_customerid = db.AddStaticValueStream(nSrcID, nItemID, "Customer ID", ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, 4);
 
                 db.Open(nSrcID);
                 db.EnableBulk(true);
@@ -157,9 +160,12 @@ namespace DNN.net.dataset.tft.electricity
                 {
                     DateTime dt = dtStart + TimeSpan.FromHours(rec.HoursFromStart);
 
-                    db.PutRawValue(nSrcID, nItemID, nStreamID_logpoweruseage, dt, (float)rec.LogPowerUsage, (float)rec.NormalizedLogPowerUsage, m_log);
-                    db.PutRawValue(nSrcID, nItemID, nStreamID_hour, dt, (float)rec.Hour, (float)rec.NormalizedHour, m_log);
-                    db.PutRawValue(nSrcID, nItemID, nStreamID_hourfromstart, dt, (float)rec.HoursFromStart, (float)rec.NormalizedHourFromStart, m_log);
+                    if (rec.IsValid)
+                    {
+                        db.PutRawValue(nSrcID, nItemID, nStreamID_logpoweruseage, dt, (float)rec.LogPowerUsage, (float)rec.NormalizedLogPowerUsage, rec.IsValid, m_log);
+                        db.PutRawValue(nSrcID, nItemID, nStreamID_hour, dt, (float)rec.Hour, (float)rec.NormalizedHour, rec.IsValid, m_log);
+                        db.PutRawValue(nSrcID, nItemID, nStreamID_hourfromstart, dt, (float)rec.HoursFromStart, (float)rec.NormalizedHourFromStart, rec.IsValid, m_log);
+                    }
 
                     nIdx++;
 
@@ -259,10 +265,16 @@ namespace DNN.net.dataset.tft.electricity
             foreach (KeyValuePair<int, DataRecordCollection> kv in m_data.RecordsByCustomer)
             {
                 int nIdx = 0;
+                float fLastVal = 0;
 
                 foreach (DataRecord rec in kv.Value.Items)
                 {
-                    rgCustomer[nIdx++] = (float)rec.NormalizedLogPowerUsage;
+                    if (!rec.IsValid && fLastVal != 0)
+                        rgCustomer[nIdx++] = fLastVal;
+                    else
+                        rgCustomer[nIdx++] = (float)rec.NormalizedLogPowerUsage;
+
+                    fLastVal = (float)rec.NormalizedLogPowerUsage;
                 }
 
                 Array.Copy(rgCustomer, 0, rgData, rgCustomer.Length * nIdxCustomer, rgCustomer.Length);
@@ -483,13 +495,13 @@ namespace DNN.net.dataset.tft.electricity
 
         public void CalculateStatistics(DataRecord.FIELD field, out double dfMean1, out double dfStdev1, bool bOnlyNonZero = false)
         {
-            double dfTotal = m_rgItems.Sum(p => p.Item(field));
+            double dfTotal = m_rgItems.Sum(p => p.ItemEx(field));
             int nCount = m_rgItems.Count;
             if (bOnlyNonZero)
                 nCount = m_rgItems.Count(p => p.Item(field) != 0);
 
             double dfMean = dfTotal / nCount;
-            double dfStdev = Math.Sqrt(m_rgItems.Sum(p => Math.Pow(p.Item(field) - dfMean, 2)) / nCount);
+            double dfStdev = Math.Sqrt(m_rgItems.Sum(p => Math.Pow(p.ItemEx(field) - dfMean, 2)) / nCount);
             dfMean1 = dfMean;
             dfStdev1 = dfStdev;
         }
@@ -498,11 +510,18 @@ namespace DNN.net.dataset.tft.electricity
         {
             for (int i = 0; i < m_rgItems.Count; i++)
             {
-                if (m_rgItems[i].IsValid)
+                double? dfVal = m_rgItems[i].Item(dt);
+                if (dfVal.HasValue)
                 {
-                    double dfVal = m_rgItems[i].Item(dt);
-                    dfVal = (dfVal - dfMean) / dfStdev;
-                    m_rgItems[i].ItemNormalized(dt, dfVal);
+                    if (dfMean != 0 && dfStdev != 0)
+                    {
+                        dfVal = (dfVal.Value - dfMean) / dfStdev;
+
+                        if (double.IsNaN(dfVal.Value) || double.IsInfinity(dfVal.Value))
+                            Trace.WriteLine("Invalid data.");
+
+                        m_rgItems[i].ItemNormalized(dt, dfVal.Value);
+                    }
                 }
             }
         }
@@ -557,7 +576,19 @@ namespace DNN.net.dataset.tft.electricity
             get { return m_dt; }
         }
 
-        public double Item(FIELD field)
+        public double? Item(FIELD field)
+        {
+            if (field == FIELD.HOUR || field == FIELD.HOURS_FROM_START)
+                return m_rgFields[(int)field];
+
+            double dfVal = m_rgFields[(int)field];
+            if (dfVal == 0)
+                return null;
+
+            return dfVal;
+        }
+
+        public double ItemEx(FIELD field)
         {
             return m_rgFields[(int)field];
         }
