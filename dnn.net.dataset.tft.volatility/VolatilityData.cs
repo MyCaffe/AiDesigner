@@ -1,4 +1,5 @@
 ﻿using MyCaffe.basecode;
+using MyCaffe.basecode.descriptors;
 using MyCaffe.common;
 using MyCaffe.db.temporal;
 using System;
@@ -177,7 +178,7 @@ namespace DNN.net.dataset.tft.volatility
 
             int nIdx = 0;
             int nTotal = m_data.RecordsBySymbol.Sum(p => p.Value.Items.Count);
-            int nSrcID = db.AddSource(strName + "." + strSub, m_rgSymbolToRegionMap.Count, m_data.RecordsPerSymbol, 3, true);
+            int nSrcID = db.AddSource(strName + "." + strSub, m_rgSymbolToRegionMap.Count, 7, m_data.RecordsPerSymbol, true);
 
             foreach (KeyValuePair<int, DataRecordCollection> kv in m_data.RecordsBySymbol)
             {
@@ -190,14 +191,14 @@ namespace DNN.net.dataset.tft.volatility
                 DateTime dtStart = kv.Value.Items.Min(p => p.Date);
                 DateTime dtEnd = kv.Value.Items.Max(p => p.Date);
 
-                int nStreamID_logvol = db.AddObservedValueStream(nSrcID, nItemID, "Log Volume", DatabaseTemporal.STREAM_VALUE_TYPE.NUMERIC, 1, dtStart, dtEnd, 60 * 60);
-                int nStreamID_opentoclose = db.AddKnownValueStream(nSrcID, nItemID, "Open to Close", DatabaseTemporal.STREAM_VALUE_TYPE.NUMERIC, 2, dtStart, dtEnd, 60 * 60);
-                int nStreamID_daysfromstart = db.AddKnownValueStream(nSrcID, nItemID, "Days from Start", DatabaseTemporal.STREAM_VALUE_TYPE.NUMERIC, 3, dtStart, dtEnd, 60 * 60);
-                int nStreamID_dayofweek = db.AddKnownValueStream(nSrcID, nItemID, "Day of Week", DatabaseTemporal.STREAM_VALUE_TYPE.CATEGORICAL, 4, dtStart, dtEnd, 60 * 60);
-                int nStreamID_dayofmonth = db.AddKnownValueStream(nSrcID, nItemID, "Day of Month", DatabaseTemporal.STREAM_VALUE_TYPE.CATEGORICAL, 5, dtStart, dtEnd, 60 * 60);
-                int nStreamID_weekofyear = db.AddKnownValueStream(nSrcID, nItemID, "Week of Year", DatabaseTemporal.STREAM_VALUE_TYPE.CATEGORICAL, 6, dtStart, dtEnd, 60 * 60);
-                int nStreamID_month = db.AddKnownValueStream(nSrcID, nItemID, "Month", DatabaseTemporal.STREAM_VALUE_TYPE.NUMERIC, 7, dtStart, dtEnd, 60 * 60);
-                int nStreamID_regionid = db.AddStaticValueStream(nSrcID, nItemID, "Region ID", DatabaseTemporal.STREAM_VALUE_TYPE.CATEGORICAL, 8);
+                int nStreamID_logvol = db.AddObservedValueStream(nSrcID, nItemID, "Log Volume", ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, 1, dtStart, dtEnd, 60 * 60);
+                int nStreamID_opentoclose = db.AddKnownValueStream(nSrcID, nItemID, "Open to Close", ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, 2, dtStart, dtEnd, 60 * 60);
+                int nStreamID_daysfromstart = db.AddKnownValueStream(nSrcID, nItemID, "Days from Start", ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, 3, dtStart, dtEnd, 60 * 60);
+                int nStreamID_dayofweek = db.AddKnownValueStream(nSrcID, nItemID, "Day of Week", ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, 4, dtStart, dtEnd, 60 * 60);
+                int nStreamID_dayofmonth = db.AddKnownValueStream(nSrcID, nItemID, "Day of Month", ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, 5, dtStart, dtEnd, 60 * 60);
+                int nStreamID_weekofyear = db.AddKnownValueStream(nSrcID, nItemID, "Week of Year", ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, 6, dtStart, dtEnd, 60 * 60);
+                int nStreamID_month = db.AddKnownValueStream(nSrcID, nItemID, "Month", ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, 7, dtStart, dtEnd, 60 * 60);
+                int nStreamID_regionid = db.AddStaticValueStream(nSrcID, nItemID, "Region ID", ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, 8);
 
                 db.Open(nSrcID);
                 db.EnableBulk(true);
@@ -208,13 +209,16 @@ namespace DNN.net.dataset.tft.volatility
                 {
                     DateTime dt = rec.Date;
 
-                    db.PutRawValue(nSrcID, nItemID, nStreamID_logvol, dt, (float)rec.LogVol, (float)rec.NormalizedLogVol, m_log);
-                    db.PutRawValue(nSrcID, nItemID, nStreamID_opentoclose, dt, (float)rec.OpenToClose, (float)rec.NormalizedOpenToClose, m_log);
-                    db.PutRawValue(nSrcID, nItemID, nStreamID_daysfromstart, dt, (float)rec.DaysFromStart, (float)rec.NormalizedDaysFromStart, m_log);
-                    db.PutRawValue(nSrcID, nItemID, nStreamID_dayofweek, dt, (float)rec.DayOfWeek, (float)rec.DayOfWeek, m_log);
-                    db.PutRawValue(nSrcID, nItemID, nStreamID_dayofmonth, dt, (float)rec.DayOfMonth, (float)rec.DayOfMonth, m_log);
-                    db.PutRawValue(nSrcID, nItemID, nStreamID_weekofyear, dt, (float)rec.WeekOfYear, (float)rec.WeekOfYear, m_log);
-                    db.PutRawValue(nSrcID, nItemID, nStreamID_month, dt, (float)rec.Month, (float)rec.Month, m_log);
+                    if (rec.IsValid)
+                    {
+                        db.PutRawValue(nSrcID, nItemID, nStreamID_logvol, dt, (float)rec.LogVol, (float)rec.NormalizedLogVol, rec.IsValid, m_log);
+                        db.PutRawValue(nSrcID, nItemID, nStreamID_opentoclose, dt, (float)rec.OpenToClose, (float)rec.NormalizedOpenToClose, rec.IsValid, m_log);
+                        db.PutRawValue(nSrcID, nItemID, nStreamID_daysfromstart, dt, (float)rec.DaysFromStart, (float)rec.NormalizedDaysFromStart, rec.IsValid, m_log);
+                        db.PutRawValue(nSrcID, nItemID, nStreamID_dayofweek, dt, (float)rec.DayOfWeek, (float)rec.DayOfWeek, rec.IsValid, m_log);
+                        db.PutRawValue(nSrcID, nItemID, nStreamID_dayofmonth, dt, (float)rec.DayOfMonth, (float)rec.DayOfMonth, rec.IsValid, m_log);
+                        db.PutRawValue(nSrcID, nItemID, nStreamID_weekofyear, dt, (float)rec.WeekOfYear, (float)rec.WeekOfYear, rec.IsValid, m_log);
+                        db.PutRawValue(nSrcID, nItemID, nStreamID_month, dt, (float)rec.Month, (float)rec.Month, rec.IsValid, m_log);
+                    }
 
                     nIdx++;
 

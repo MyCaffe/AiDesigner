@@ -1,4 +1,5 @@
 ﻿using MyCaffe.basecode;
+using MyCaffe.basecode.descriptors;
 using MyCaffe.common;
 using MyCaffe.db.temporal;
 using System;
@@ -317,7 +318,7 @@ namespace DNN.net.dataset.tft.traffic
 
             int nIdx = 0;
             int nTotal = m_data.RecordsByCustomer.Sum(p => p.Value.Items.Count);
-            int nSrcID = db.AddSource(strName + "." + strSub, m_rgStations.Count, m_data.RecordsPerCustomer, 3, true);
+            int nSrcID = db.AddSource(strName + "." + strSub, m_rgStations.Count, 5, m_data.RecordsPerCustomer, true);
 
             foreach (KeyValuePair<int, DataRecordCollection> kv in m_data.RecordsByCustomer)
             {
@@ -328,12 +329,12 @@ namespace DNN.net.dataset.tft.traffic
                 DateTime dtStart = new DateTime(2017, 1, 1);
                 DateTime dtEnd = dtStart + TimeSpan.FromHours(kv.Value.Items.Last().HoursFromStart);
 
-                int nStreamID_value = db.AddObservedValueStream(nSrcID, nItemID, "Value", DatabaseTemporal.STREAM_VALUE_TYPE.NUMERIC, 1, dtStart, dtEnd, 60 * 60);
-                int nStreamID_sensorday = db.AddKnownValueStream(nSrcID, nItemID, "Sensor Day", DatabaseTemporal.STREAM_VALUE_TYPE.NUMERIC, 2, dtStart, dtEnd, 60 * 60);
-                int nStreamID_timeonday = db.AddKnownValueStream(nSrcID, nItemID, "Time on Day", DatabaseTemporal.STREAM_VALUE_TYPE.NUMERIC, 2, dtStart, dtEnd, 60 * 60);
-                int nStreamID_dayofweek = db.AddKnownValueStream(nSrcID, nItemID, "Day of Week", DatabaseTemporal.STREAM_VALUE_TYPE.NUMERIC, 2, dtStart, dtEnd, 60 * 60);
-                int nStreamID_hourfromstart = db.AddKnownValueStream(nSrcID, nItemID, "Hour from Start", DatabaseTemporal.STREAM_VALUE_TYPE.NUMERIC, 3, dtStart, dtEnd, 60 * 60);
-                int nStreamID_stationid = db.AddStaticValueStream(nSrcID, nItemID, "Station ID", DatabaseTemporal.STREAM_VALUE_TYPE.CATEGORICAL, 4);
+                int nStreamID_value = db.AddObservedValueStream(nSrcID, nItemID, "Value", ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, 1, dtStart, dtEnd, 60 * 60);
+                int nStreamID_sensorday = db.AddKnownValueStream(nSrcID, nItemID, "Sensor Day", ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, 2, dtStart, dtEnd, 60 * 60);
+                int nStreamID_timeonday = db.AddKnownValueStream(nSrcID, nItemID, "Time on Day", ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, 2, dtStart, dtEnd, 60 * 60);
+                int nStreamID_dayofweek = db.AddKnownValueStream(nSrcID, nItemID, "Day of Week", ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, 2, dtStart, dtEnd, 60 * 60);
+                int nStreamID_hourfromstart = db.AddKnownValueStream(nSrcID, nItemID, "Hour from Start", ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, 3, dtStart, dtEnd, 60 * 60);
+                int nStreamID_stationid = db.AddStaticValueStream(nSrcID, nItemID, "Station ID", ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, 4);
 
                 db.Open(nSrcID);
                 db.EnableBulk(true);
@@ -344,11 +345,14 @@ namespace DNN.net.dataset.tft.traffic
                 {
                     DateTime dt = dtStart + TimeSpan.FromHours(rec.HoursFromStart);
 
-                    db.PutRawValue(nSrcID, nItemID, nStreamID_value, dt, (float)rec.Value, (float)rec.NormalizedValue, m_log);
-                    db.PutRawValue(nSrcID, nItemID, nStreamID_sensorday, dt, (float)rec.SensorDay, (float)rec.NormalizedSensorDay, m_log);
-                    db.PutRawValue(nSrcID, nItemID, nStreamID_timeonday, dt, (float)rec.TimeOnDay, (float)rec.NormalizedTimeOnDay, m_log);
-                    db.PutRawValue(nSrcID, nItemID, nStreamID_dayofweek, dt, (float)rec.DayOfWeek, (float)rec.NormalizedDayOfWeek, m_log);
-                    db.PutRawValue(nSrcID, nItemID, nStreamID_hourfromstart, dt, (float)rec.HoursFromStart, (float)rec.NormalizedHourFromStart, m_log);
+                    if (rec.IsValid)
+                    {
+                        db.PutRawValue(nSrcID, nItemID, nStreamID_value, dt, (float)rec.Value, (float)rec.NormalizedValue, rec.IsValid, m_log);
+                        db.PutRawValue(nSrcID, nItemID, nStreamID_sensorday, dt, (float)rec.SensorDay, (float)rec.NormalizedSensorDay, rec.IsValid, m_log);
+                        db.PutRawValue(nSrcID, nItemID, nStreamID_timeonday, dt, (float)rec.TimeOnDay, (float)rec.NormalizedTimeOnDay, rec.IsValid, m_log);
+                        db.PutRawValue(nSrcID, nItemID, nStreamID_dayofweek, dt, (float)rec.DayOfWeek, (float)rec.NormalizedDayOfWeek, rec.IsValid, m_log);
+                        db.PutRawValue(nSrcID, nItemID, nStreamID_hourfromstart, dt, (float)rec.HoursFromStart, (float)rec.NormalizedHourFromStart, rec.IsValid, m_log);
+                    }
 
                     nIdx++;
 
