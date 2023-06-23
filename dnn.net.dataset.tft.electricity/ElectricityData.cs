@@ -25,6 +25,7 @@ namespace DNN.net.dataset.tft.electricity
         Log m_log;
         CancelEvent m_evtCancel;
         Stopwatch m_sw = new Stopwatch();
+        bool m_bSaveNormalizedData = true;
 
 
         public ElectricityData(string strDataFile, Log log, CancelEvent evtCancel)
@@ -155,6 +156,8 @@ namespace DNN.net.dataset.tft.electricity
                 db.EnableBulk(true);
 
                 db.PutRawValue(nSrcID, nItemID, nStreamID_customerid, nCustomerID);
+                float fLast = 0;
+                float fLastNorm = 0;
 
                 foreach (DataRecord rec in kv.Value.Items)
                 {
@@ -162,9 +165,17 @@ namespace DNN.net.dataset.tft.electricity
 
                     if (rec.IsValid)
                     {
-                        db.PutRawValue(nSrcID, nItemID, nStreamID_logpoweruseage, dt, (float)rec.LogPowerUsage, (float)rec.NormalizedLogPowerUsage, rec.IsValid, m_log);
+                        fLast = (float)rec.LogPowerUsage;
+                        fLastNorm = (float)rec.NormalizedLogPowerUsage;
+                        db.PutRawValue(nSrcID, nItemID, nStreamID_logpoweruseage, dt, fLast, fLastNorm, rec.IsValid, m_log);
                         db.PutRawValue(nSrcID, nItemID, nStreamID_hour, dt, (float)rec.Hour, (float)rec.NormalizedHour, rec.IsValid, m_log);
                         db.PutRawValue(nSrcID, nItemID, nStreamID_hourfromstart, dt, (float)rec.HoursFromStart, (float)rec.NormalizedHourFromStart, rec.IsValid, m_log);
+                    }
+                    else if (fLast != 0)
+                    {
+                        db.PutRawValue(nSrcID, nItemID, nStreamID_logpoweruseage, dt, fLast, fLastNorm, true, m_log);
+                        db.PutRawValue(nSrcID, nItemID, nStreamID_hour, dt, (float)rec.Hour, (float)rec.NormalizedHour, true, m_log);
+                        db.PutRawValue(nSrcID, nItemID, nStreamID_hourfromstart, dt, (float)rec.HoursFromStart, (float)rec.NormalizedHourFromStart, true, m_log);
                     }
 
                     nIdx++;
@@ -265,16 +276,21 @@ namespace DNN.net.dataset.tft.electricity
             foreach (KeyValuePair<int, DataRecordCollection> kv in m_data.RecordsByCustomer)
             {
                 int nIdx = 0;
-                float fLastVal = 0;
+
+                Array.Clear(rgCustomer, 0, rgCustomer.Length);
+                float fLast = 0;
 
                 foreach (DataRecord rec in kv.Value.Items)
                 {
-                    if (!rec.IsValid && fLastVal != 0)
-                        rgCustomer[nIdx++] = fLastVal;
-                    else
-                        rgCustomer[nIdx++] = (float)rec.NormalizedLogPowerUsage;
+                    float fVal = fLast;
 
-                    fLastVal = (float)rec.NormalizedLogPowerUsage;
+                    if (rec.IsValid)
+                    {
+                        fVal = (m_bSaveNormalizedData) ? (float)rec.NormalizedLogPowerUsage : (float)rec.LogPowerUsage;
+                        fLast = fVal;
+                    }
+
+                    rgCustomer[nIdx++] = fVal;
                 }
 
                 Array.Copy(rgCustomer, 0, rgData, rgCustomer.Length * nIdxCustomer, rgCustomer.Length);
@@ -298,10 +314,20 @@ namespace DNN.net.dataset.tft.electricity
             {
                 int nIdx = 0;
 
+                Array.Clear(rgCustomer, 0, rgCustomer.Length);
+
                 foreach (DataRecord rec in kv.Value.Items)
                 {
-                    rgCustomer[nIdx++] = (float)rec.NormalizedHour;
-                    rgCustomer[nIdx++] = (float)rec.NormalizedHourFromStart;
+                    if (m_bSaveNormalizedData)
+                    {
+                        rgCustomer[nIdx++] = (float)rec.NormalizedHour;
+                        rgCustomer[nIdx++] = (float)rec.NormalizedHourFromStart;
+                    }
+                    else
+                    {
+                        rgCustomer[nIdx++] = (float)rec.Hour;
+                        rgCustomer[nIdx++] = (float)rec.HoursFromStart;
+                    }
                 }
 
                 Array.Copy(rgCustomer, 0, rgData, rgCustomer.Length * nIdxCustomer, rgCustomer.Length);
@@ -526,6 +552,11 @@ namespace DNN.net.dataset.tft.electricity
             }
         }
 
+        public void Sort()
+        {
+            m_rgItems = m_rgItems.OrderBy(p => p.Date).ToList();
+        }
+
         public List<DataRecord> Items
         {
             get { return m_rgItems; }
@@ -691,6 +722,8 @@ namespace DNN.net.dataset.tft.electricity
                 int nEndIdx = (int)(kv.Value.Count * dfPctEnd);
                 int nValidStartIdx = -1;
                 int nValidEndIDx = -1;
+
+                kv.Value.Sort();
 
                 for (int i = nStartIdx; i < nEndIdx; i++)
                 {
