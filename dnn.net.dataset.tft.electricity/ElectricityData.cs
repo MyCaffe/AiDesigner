@@ -158,7 +158,8 @@ namespace DNN.net.dataset.tft.electricity
                 db.Open(nSrcID);
                 db.EnableBulk(true);
 
-                db.PutRawValue(nSrcID, nItemID, nStreamID_customerid, nCustomerID);
+                db.PutRawValue(nSrcID, nItemID, nStreamID_customerid, nCustomerID - 1);
+
                 float fLast = 0;
                 float fLastNorm = 0;
 
