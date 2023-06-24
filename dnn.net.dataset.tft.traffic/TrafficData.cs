@@ -318,13 +318,16 @@ namespace DNN.net.dataset.tft.traffic
 
             int nIdx = 0;
             int nTotal = m_data.RecordsByCustomer.Sum(p => p.Value.Items.Count);
-            int nSrcID = db.AddSource(strName + "." + strSub, m_rgStations.Count, 5, m_data.RecordsPerCustomer, true);
+            int nSrcID = db.AddSource(strName + "." + strSub, m_rgStations.Count, 5, m_data.RecordsPerCustomer, true, 0, false);
+            int nItemCount = 0;
+            int nItemIdx = 0;
 
             foreach (KeyValuePair<int, DataRecordCollection> kv in m_data.RecordsByCustomer)
             {
                 int nStationID = kv.Key;
                 string strStation = m_rgStations[nStationID];
-                int nItemID = db.AddValueItem(nSrcID, strStation);
+                int nItemID = db.AddValueItem(nSrcID, nItemIdx, strStation);
+                nItemIdx++;
 
                 DateTime dtStart = new DateTime(2017, 1, 1);
                 DateTime dtEnd = dtStart + TimeSpan.FromHours(kv.Value.Items.Last().HoursFromStart);
@@ -355,6 +358,7 @@ namespace DNN.net.dataset.tft.traffic
                     }
 
                     nIdx++;
+                    nItemCount++;
 
                     if (nIdx % 3000 == 0)
                         db.SaveRawValues();
@@ -373,7 +377,7 @@ namespace DNN.net.dataset.tft.traffic
 
                 db.SaveRawValues();
                 db.UpdateStreamCounts(nItemID, nStreamID_value, nStreamID_sensorday, nStreamID_timeonday, nStreamID_dayofweek, nStreamID_hourfromstart);
-
+                db.UpdateSourceCounts(nItemCount);
                 db.Close();
 
                 if (m_evtCancel.WaitOne(0))
