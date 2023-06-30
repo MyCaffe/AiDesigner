@@ -140,6 +140,9 @@ namespace DNN.net.dataset.tft.electricity
             int nItemCount = 0;
             int nItemIdx = 0;
 
+            db.Open(nSrcID);
+            db.EnableBulk(true);
+
             foreach (KeyValuePair<int, DataRecordCollection> kv in m_data.RecordsByCustomer)
             {
                 int nCustomerID = kv.Key;
@@ -154,9 +157,6 @@ namespace DNN.net.dataset.tft.electricity
                 int nStreamID_hour = db.AddKnownValueStream(nSrcID, nItemID, "Hour", ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, 2, dtStart, dtEnd, 60 * 60);
                 int nStreamID_hourfromstart = db.AddKnownValueStream(nSrcID, nItemID, "Hour from Start", ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, 3, dtStart, dtEnd, 60 * 60);
                 int nStreamID_customerid = db.AddStaticValueStream(nSrcID, nItemID, "Customer ID", ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, 4);
-
-                db.Open(nSrcID);
-                db.EnableBulk(true);
 
                 db.PutRawValue(nSrcID, nItemID, nStreamID_customerid, nCustomerID - 1);
 
@@ -202,12 +202,13 @@ namespace DNN.net.dataset.tft.electricity
 
                 db.SaveRawValues();
                 db.UpdateStreamCounts(nItemID, nStreamID_logpoweruseage, nStreamID_hour, nStreamID_hourfromstart);
-                db.UpdateSourceCounts(nItemCount);
-                db.Close();
 
                 if (m_evtCancel.WaitOne(0))
                     break;
             }
+
+            db.UpdateSourceCounts(nItemCount);
+            db.Close();
 
             return nSrcID;
         }

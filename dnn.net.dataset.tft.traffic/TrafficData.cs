@@ -322,6 +322,9 @@ namespace DNN.net.dataset.tft.traffic
             int nItemCount = 0;
             int nItemIdx = 0;
 
+            db.Open(nSrcID);
+            db.EnableBulk(true);
+
             foreach (KeyValuePair<int, DataRecordCollection> kv in m_data.RecordsByCustomer)
             {
                 int nStationID = kv.Key;
@@ -338,9 +341,6 @@ namespace DNN.net.dataset.tft.traffic
                 int nStreamID_dayofweek = db.AddKnownValueStream(nSrcID, nItemID, "Day of Week", ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, 2, dtStart, dtEnd, 60 * 60);
                 int nStreamID_hourfromstart = db.AddKnownValueStream(nSrcID, nItemID, "Hour from Start", ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, 3, dtStart, dtEnd, 60 * 60);
                 int nStreamID_stationid = db.AddStaticValueStream(nSrcID, nItemID, "Station ID", ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, 4);
-
-                db.Open(nSrcID);
-                db.EnableBulk(true);
 
                 db.PutRawValue(nSrcID, nItemID, nStreamID_stationid, nStationID);
 
@@ -377,12 +377,13 @@ namespace DNN.net.dataset.tft.traffic
 
                 db.SaveRawValues();
                 db.UpdateStreamCounts(nItemID, nStreamID_value, nStreamID_sensorday, nStreamID_timeonday, nStreamID_dayofweek, nStreamID_hourfromstart);
-                db.UpdateSourceCounts(nItemCount);
-                db.Close();
 
                 if (m_evtCancel.WaitOne(0))
                     break;
             }
+
+            db.UpdateSourceCounts(nItemCount);
+            db.Close();
 
             return nSrcID;
         }
