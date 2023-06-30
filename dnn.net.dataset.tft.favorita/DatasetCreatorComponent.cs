@@ -10,6 +10,8 @@ using DNN.net.dataset.common;
 using System.IO;
 using MyCaffe.data;
 using System.Threading;
+using System.Data;
+using MyCaffe.db.temporal;
 
 /// WORK IN PROGRESS
 namespace DNN.net.dataset.tft.favorita
@@ -19,7 +21,7 @@ namespace DNN.net.dataset.tft.favorita
         IXDatasetCreatorProgress m_iprogress = null;
         DatasetFactory m_factory = new DatasetFactory();
         CancelEvent m_evtCancel = new CancelEvent();
-        DB_VERSION m_dbVer = DB_VERSION.DEFAULT;
+        DB_VERSION m_dbVer = DB_VERSION.TEMPORAL;
 
         public enum BOOLEAN
         {
@@ -30,7 +32,7 @@ namespace DNN.net.dataset.tft.favorita
         public enum OUTPUT_TYPE
         {
             CSV,
-            NPY
+            SQL
         }
 
         public DatasetCreatorComponent()
@@ -96,7 +98,10 @@ namespace DNN.net.dataset.tft.favorita
             config.Settings.Add(new DataConfigSetting("Output Path", strOutputPath, DataConfigSetting.TYPE.DIRECTORY));
             config.Settings.Add(new DataConfigSetting("Start Date", dtStart, DataConfigSetting.TYPE.DATETIME));
             config.Settings.Add(new DataConfigSetting("End Date", dtEnd, DataConfigSetting.TYPE.DATETIME));
-            addList(config, "Output Format", outType, OUTPUT_TYPE.CSV, OUTPUT_TYPE.NPY);
+            config.Settings.Add(new DataConfigSetting("Train Split", Properties.Settings.Default.TrainingSplitPct, DataConfigSetting.TYPE.REAL));
+            config.Settings.Add(new DataConfigSetting("Test Split", Properties.Settings.Default.TestingSplitPct, DataConfigSetting.TYPE.REAL));
+            config.Settings.Add(new DataConfigSetting("Validation Split", Properties.Settings.Default.ValidSplitPct, DataConfigSetting.TYPE.REAL));
+            addList(config, "Output Format", outType, OUTPUT_TYPE.CSV, OUTPUT_TYPE.SQL);
         }
 
         public void Create(DatasetConfiguration config, IXDatasetCreatorProgress progress)
@@ -126,6 +131,9 @@ namespace DNN.net.dataset.tft.favorita
             strOutputPath = config.Settings.Find("Output Path").Value.ToString();
             dtStart = (DateTime)config.Settings.Find("Start Date").Value;
             dtEnd = (DateTime)config.Settings.Find("End Date").Value;
+            double dfTrainSplit = (double)config.Settings.Find("Train Split").Value;
+            double dfTestSplit = (double)config.Settings.Find("Test Split").Value;
+            double dfValSplit = (double)config.Settings.Find("Validation Split").Value;
 
             DataConfigSetting ds = config.Settings.Find("Output Format");
             OptionItem opt = ds.Value as OptionItem;
@@ -138,8 +146,11 @@ namespace DNN.net.dataset.tft.favorita
 
             try
             {
-                if (!Directory.Exists(strOutputPath))
-                    throw new Exception("Could not find the output path '" + strOutputPath + "'.");
+                if (outType != OUTPUT_TYPE.SQL)
+                {
+                    if (!Directory.Exists(strOutputPath))
+                        throw new Exception("Could not find the output path '" + strOutputPath + "'.");
+                }
 
                 Dictionary<string, string> rgFiles = new Dictionary<string, string>()
                 {
@@ -165,12 +176,33 @@ namespace DNN.net.dataset.tft.favorita
 
                 if (data.LoadData(dtStart, dtEnd))
                 {
-                    if (outType == OUTPUT_TYPE.CSV)
-                        data.SaveData(strOutputPath + "consolidated_favorita.csv");
-                    else if (outType == OUTPUT_TYPE.NPY)
-                        data.SaveAsNumpy(strOutputPath);
-                    else
-                        throw new Exception("Unknown output type '" + outType.ToString() + "'.");
+                    FavoritaData dataTrain = data.SplitData("train", 0, dfTrainSplit);
+                    FavoritaData dataTest = data.SplitData("test", dfTrainSplit, dfTrainSplit + dfTestSplit);
+                    FavoritaData dataVal = data.SplitData("valid", dfTrainSplit + dfTestSplit, 1);
+
+                    Dictionary<int, Dictionary<int, Dictionary<DataRecord.FIELD, Tuple<double, double>>>> rgScalers = new Dictionary<int, Dictionary<int, Dictionary<DataRecord.FIELD, Tuple<double, double>>>>();
+                    dataTrain.NormalizeData(rgScalers);
+                    dataTest.NormalizeData(rgScalers);
+                    dataVal.NormalizeData(rgScalers);
+
+                    switch (outType)
+                    {
+                        case OUTPUT_TYPE.CSV:
+                            data.SaveData(strOutputPath + "consolidated_favorita.csv");
+                            break;
+
+                        case OUTPUT_TYPE.SQL:
+                            DatabaseTemporal db = new DatabaseTemporal();
+                            db.DeleteDataset(Name, false, log, m_evtCancel);
+                            int nTrainSrcID = dataTrain.SaveAsSql(Name, "train");
+                            int nTestSrcID = dataTest.SaveAsSql(Name, "test");
+                            //dataVal.SaveAsSql(Name, "validation");
+                            db.AddDataset(config.ID, Name, nTestSrcID, nTrainSrcID, 0, 0, null, false);
+                            break;
+
+                        default:
+                            throw new Exception("Unknown output type '" + outType.ToString() + "'.");
+                    }
                 }
             }
             catch (Exception excpt)

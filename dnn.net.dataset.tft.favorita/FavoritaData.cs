@@ -1,5 +1,6 @@
 ﻿using MyCaffe.basecode;
 using MyCaffe.common;
+using MyCaffe.db.temporal;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -8,6 +9,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace DNN.net.dataset.tft.favorita
 {
@@ -24,7 +26,7 @@ namespace DNN.net.dataset.tft.favorita
         Dictionary<string, string> m_rgFiles;
         Log m_log;
         CancelEvent m_evtCancel;
-
+        Stopwatch m_sw = new Stopwatch();
 
         public FavoritaData(Dictionary<string, string> rgFiles, Log log, CancelEvent evtCancel)
         {
@@ -119,7 +121,7 @@ namespace DNN.net.dataset.tft.favorita
                     if (sw.Elapsed.TotalMilliseconds > 1000)
                     {
                         double dfPct = (double)lRead / (double)fi.Length;
-                        m_log.WriteLine("Loading " + strType + " data, " + dfPct.ToString("P4") + " complete.", true);
+                        m_log.WriteLine("Loading " + strType + " data, " + dfPct.ToString("P") + " complete.", true);
                         sw.Restart();
 
                         if (m_evtCancel.WaitOne(0))
@@ -396,222 +398,136 @@ namespace DNN.net.dataset.tft.favorita
             return true;
         }
 
-        public bool SaveAsNumpy(string strPath)
+        public FavoritaData SplitData(string strName, double dfPctStart, double dfPctEnd)
         {
-            int nPastSteps = 90;
-            int nFutureSteps = 30;
-            float fTrainPct = 0.8f;
-            float fTestPct = 0.15f;
-            float fValdPct = 0.05f;
-            int[] rgStaticCat;
-            int[] rgStaticCatShape;
-            float[] rgStaticNum;
-            int[] rgStaticNumShape;
-            int[] rgHistCat;
-            int[] rgHistCatShape;
-            float[] rgHistNum;
-            int[] rgHistNumShape;
-            int[] rgFutCat;
-            int[] rgFutCatShape;
-            float[] rgFutNum;
-            int[] rgFutNumShape;
-            float[] rgTarget;
-            int[] rgTargetShape;
-            long[] rgTimeIdx;
-            int[] rgTimeIdxShape;
+            FavoritaData data = new FavoritaData(m_rgFiles, m_log, m_evtCancel);
 
-            if (!gatherData(nPastSteps, nFutureSteps,
-                            out rgStaticCat, out rgStaticCatShape, out rgStaticNum, out rgStaticNumShape,
-                            out rgHistCat, out rgHistCatShape, out rgHistNum, out rgHistNumShape,
-                            out rgFutCat, out rgFutCatShape, out rgFutNum, out rgFutNumShape,
-                            out rgTimeIdx, out rgTimeIdxShape,
-                            out rgTarget, out rgTargetShape))
-                return false;
+            data.m_rgRecords = m_rgRecords.Split(strName, dfPctStart, dfPctEnd);
+            data.m_rgStores = m_rgStores;
+            data.m_rgItems = m_rgItems;
+            data.m_rgHolidaysLocal = m_rgHolidaysLocal;
+            data.m_rgHolidaysNational = m_rgHolidaysNational;
+            data.m_rgHolidaysRegional = m_rgHolidaysRegional;
+            data.m_rgOil = m_rgOil;
+            data.m_rgTrx = m_rgTrx;
+            data.m_rgFiles = m_rgFiles;
 
-            int nStartIdx = 0;
-            int nCount = (int)(m_rgRecords.IndexCount * fTrainPct);
-
-            save(strPath, "train", "static_feats", nStartIdx, nCount, rgStaticCat, rgStaticCatShape, rgStaticNum, rgStaticNumShape);
-            save(strPath, "train", "historical_ts", nStartIdx, nCount, rgHistCat, rgHistCatShape, rgHistNum, rgHistNumShape);
-            save(strPath, "train", "future_ts", nStartIdx, nCount, rgFutCat, rgFutCatShape, rgFutNum, rgFutNumShape);
-            save(strPath, "train", "time_index", nStartIdx, nCount, rgTimeIdx, rgTimeIdxShape);
-
-            nStartIdx = nCount;
-            nCount = (int)(m_rgRecords.IndexCount * fTestPct);
-
-            save(strPath, "test", "static_feats", nStartIdx, nCount, rgStaticCat, rgStaticCatShape, rgStaticNum, rgStaticNumShape);
-            save(strPath, "test", "historical_ts", nStartIdx, nCount, rgHistCat, rgHistCatShape, rgHistNum, rgHistNumShape);
-            save(strPath, "test", "future_ts", nStartIdx, nCount, rgFutCat, rgFutCatShape, rgFutNum, rgFutNumShape);
-            save(strPath, "test", "time_index", nStartIdx, nCount, rgTimeIdx, rgTimeIdxShape);
-
-            nStartIdx += nCount;
-            nCount = m_rgRecords.IndexCount - nStartIdx;
-
-            save(strPath, "validation", "static_feats", nStartIdx, nCount, rgStaticCat, rgStaticCatShape, rgStaticNum, rgStaticNumShape);
-            save(strPath, "validation", "historical_ts", nStartIdx, nCount, rgHistCat, rgHistCatShape, rgHistNum, rgHistNumShape);
-            save(strPath, "validation", "future_ts", nStartIdx, nCount, rgFutCat, rgFutCatShape, rgFutNum, rgFutNumShape);
-            save(strPath, "validation", "time_index", nStartIdx, nCount, rgTimeIdx, rgTimeIdxShape);
-
-            return true;
+            return data;
         }
 
-        private bool gatherData(int nPastSteps,
-                                int nFutureSteps,
-                                out int[] rgStaticCategorical, out int[] rgStaticCategoricalShape, out float[] rgStaticNumeric, out int[] rgStaticNumericShape,
-                                out int[] rgHistoricalCategorical, out int[] rgHistoricalCategoricalShape, out float[] rgHistoricalNumeric, out int[] rgHistoricalNumericShape,
-                                out int[] rgFutureCategorical, out int[] rgFutureCategoricalShape, out float[] rgFutureNumeric, out int[] rgFutureNumericShape,
-                                out long[] rgTimeIdx, out int[] rgTimeIdxShape,
-                                out float[] rgTarget, out int[] rgTargetShape)
+        public bool NormalizeData(Dictionary<int, Dictionary<int, Dictionary<DataRecord.FIELD, Tuple<double, double>>>> rgScalers)
         {
-            m_rgRecords.Reset();
+            return m_rgRecords.Normalize(m_sw, m_log, m_evtCancel, rgScalers);
+        }
 
-            int nCount = m_rgRecords.IndexCount;
-
-            int nNumStaticCategorical = DataRecord.NumStaticCategorical;
-            int nNumStaticNumeric = DataRecord.NumStaticNumeric;
-            int nNumHistoricalCategorical = DataRecord.NumHistoricalCategorical;
-            int nNumHistoricalNumeric = DataRecord.NumHistoricalNumeric;
-            int nNumFutureCategorical = DataRecord.NumFutureCategorical;
-            int nNumFutureNumeric = DataRecord.NumFutureNumeric;
-
-            rgStaticCategorical = null;
-            rgStaticNumeric = null;
-            rgHistoricalCategorical = null;
-            rgHistoricalNumeric = null;
-            rgFutureCategorical = null;
-            rgFutureNumeric = null;
-            rgTimeIdx = null;
-
-            rgStaticCategoricalShape = new int[] { nCount, nNumStaticCategorical };
-            rgStaticNumericShape = new int[] { nCount, nNumStaticNumeric };
-            rgHistoricalCategoricalShape = new int[] { nCount, nPastSteps, nNumHistoricalCategorical };
-            rgHistoricalNumericShape = new int[] { nCount, nPastSteps, nNumHistoricalNumeric };
-            rgFutureCategoricalShape = new int[] { nCount, nFutureSteps, nNumFutureCategorical };
-            rgFutureNumericShape = new int[] { nCount, nFutureSteps, nNumFutureNumeric };
-            rgTargetShape = new int[] { nCount, nFutureSteps };
-            rgTimeIdxShape = new int[] { nCount };
-
-            if (nNumStaticCategorical > 0)
-                rgStaticCategorical = new int[nCount * nNumStaticCategorical];
-
-            if (nNumStaticNumeric > 0)
-                rgStaticNumeric = new float[nCount * nNumStaticNumeric];
-
-            if (nNumHistoricalCategorical > 0)
-                rgHistoricalCategorical = new int[nCount * nPastSteps * nNumHistoricalCategorical];
-
-            if (nNumHistoricalNumeric > 0)
-                rgHistoricalNumeric = new float[nCount * nPastSteps * nNumHistoricalNumeric];
-
-            if (nNumFutureCategorical > 0)
-                rgFutureCategorical = new int[nCount * nFutureSteps * nNumFutureCategorical];
-
-            if (nNumFutureNumeric > 0)
-                rgFutureNumeric = new float[nCount * nFutureSteps * nNumFutureNumeric];
-
-            rgTimeIdx = new long[nCount];
-            rgTarget = new float[nCount * nFutureSteps];
-
+        public int SaveAsSql(string strName, string strSub)
+        {
+            DatabaseTemporal db = new DatabaseTemporal();
             Stopwatch sw = new Stopwatch();
-            DataRecord rec = m_rgRecords.Next();
-            int nIdx = 0;
-
-            int nStatCatOffset = 0;
-            int nStatNumOffset = 0;
-            int nHistCatOffset = 0;
-            int nHistNumOffset = 0;
-            int nFutCatOffset = 0;
-            int nFutNumOffset = 0;
-            int nTargetOffset = 0;
 
             sw.Start();
-            while (rec != null)
+
+            int nSrcID = db.AddSource(strName + "." + strSub, m_rgRecords.RecordsByStoreItem.Count, 5, m_rgRecords.RecordsByStoreItem.Max(p => p.Value.Count), true, 0, false);
+            int nItemCount = m_rgRecords.RecordsByStoreItem.Sum(p => p.Value.Count);
+            int nItemIdx = 0;
+
+            db.Open(nSrcID);
+            db.EnableBulk(true);
+
+            Dictionary<int, int> rgIdxToItemID = new Dictionary<int, int>();
+            List<KeyValuePair<int, ItemRecord>> rgItems1 = m_rgItems.OrderBy(p => p.Key).ToList();
+            for (int i=0; i<rgItems1.Count; i++)
             {
-                rgTimeIdx[nIdx] = rec.UnixTime;
+                rgIdxToItemID.Add(rgItems1[i].Key, i);
+            }
 
-                //nStatCatOffset = rec.LoadStaticCategorical(rgStaticCategorical, nStatCatOffset);
-                //nStatNumOffset = rec.LoadStaticNumeric(rgStaticNumeric, nStatNumOffset);
-                //nHistCatOffset = rec.LoadHistoricalCategorical(rgHistoricalCategorical, nHistCatOffset);
-                //nHistNumOffset = rec.LoadHistoricalNumeric(rgHistoricalNumeric, nHistNumOffset);
-                //nFutCatOffset = rec.LoadFutureCategorical(rgFutureCategorical, nFutCatOffset);
-                //nFutNumOffset = rec.LoadFutureNumeric(rgFutureNumeric, nFutNumOffset);
-                //nTargetOffset = rec.LoadTarget(rgTarget, nTargetOffset);
+            foreach (KeyValuePair<int, Dictionary<int, List<DataRecord>>> kv in m_rgRecords.RecordsByStoreItem)
+            {
+                int nStoreID = kv.Key;
+                StoreRecord store = m_rgStores[nStoreID];
+                string strStore = store.StoreNum.ToString();
 
-                if (sw.Elapsed.TotalMilliseconds > 1000)
+                foreach (KeyValuePair<int, List<DataRecord>> kv1 in kv.Value)
                 {
-                    double dfPct = (double)nIdx / m_rgRecords.IndexCount;
-                    m_log.WriteLine("Gathering data at " + dfPct.ToString("P") + " complete.");
-                    sw.Restart();
+                    List<DataRecord> rgItems = kv1.Value.OrderBy(p => p.Date).ToList();
+                    int nItemID = rgIdxToItemID[kv1.Key];
+                    ItemRecord item = m_rgItems[nItemID];
+                    string strItem = item.ItemNum.ToString();
+                    string strStoreItem = strStore + "." + strItem;
 
-                    if (m_evtCancel.WaitOne(0))
-                        return false;
+                    DateTime dtStart = rgItems[0].Date;
+                    DateTime dtEnd = rgItems[rgItems.Count - 1].Date;
+                    int nSecondsPerStep = 1;
+
+                    int nOrdering = 0;
+                    int nStreamID_logsales = db.AddObservedValueStream(nSrcID, nItemIdx, strStoreItem + ".logsales", MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nOrdering++, dtStart, dtEnd, nSecondsPerStep);
+                    int nStreamID_oilprice = db.AddObservedValueStream(nSrcID, nItemIdx, "OilPrice", MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nOrdering++, dtStart, dtEnd, nSecondsPerStep);
+                    int nStreamID_storetrx = db.AddObservedValueStream(nSrcID, nItemIdx, strStoreItem + ".trx", MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nOrdering++, dtStart, dtEnd, nSecondsPerStep);
+
+                    int nStreamID_onpromotion = db.AddKnownValueStream(nSrcID, nItemIdx, strStoreItem + ".onpromotion", MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nOrdering++, dtStart, dtEnd, nSecondsPerStep);
+                    int nStreamID_dayofweek = db.AddKnownValueStream(nSrcID, nItemIdx, strStoreItem + ".dayofweek", MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nOrdering++, dtStart, dtEnd, nSecondsPerStep);
+                    int nStreamID_dayofmonth = db.AddKnownValueStream(nSrcID, nItemIdx, strStoreItem + ".dayofmonth", MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nOrdering++, dtStart, dtEnd, nSecondsPerStep);
+                    int nStreamID_month = db.AddKnownValueStream(nSrcID, nItemIdx, strStoreItem + ".month", MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nOrdering++, dtStart, dtEnd, nSecondsPerStep);
+                    int nStreamID_holidaytype = db.AddKnownValueStream(nSrcID, nItemIdx, strStoreItem + ".holidaytype", MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nOrdering++, dtStart, dtEnd, nSecondsPerStep);
+                    int nStreamID_holidaylocaleid = db.AddKnownValueStream(nSrcID, nItemIdx, strStoreItem + ".holidaylocaleid", MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nOrdering++, dtStart, dtEnd, nSecondsPerStep);
+
+                    int nStreamID_itemnum = db.AddStaticValueStream(nSrcID, nItemIdx, strStoreItem + ".itemnum", MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nOrdering++);
+                    int nStreamID_storenum = db.AddStaticValueStream(nSrcID, nItemIdx, strStoreItem + ".storenum", MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nOrdering++);
+                    int nStreamID_storecityid = db.AddStaticValueStream(nSrcID, nItemIdx, strStoreItem + ".storecityid", MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nOrdering++);
+                    int nStreamID_storestateid = db.AddStaticValueStream(nSrcID, nItemIdx, strStoreItem + ".storestateid", MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nOrdering++);
+                    int nStreamID_storetypeid = db.AddStaticValueStream(nSrcID, nItemIdx, strStoreItem + ".storetypeid", MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nOrdering++);
+                    int nStreamID_storecluster = db.AddStaticValueStream(nSrcID, nItemIdx, strStoreItem + ".storecluster", MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nOrdering++);
+                    int nStreamID_familyid = db.AddStaticValueStream(nSrcID, nItemIdx, strStoreItem + ".familyid", MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nOrdering++);
+                    int nStreamID_classid = db.AddStaticValueStream(nSrcID, nItemIdx, strStoreItem + ".classid", MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nOrdering++);
+                    int nStreamID_perishable = db.AddStaticValueStream(nSrcID, nItemIdx, strStoreItem + ".perishable", MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nOrdering++);
+
+                    db.PutRawValue(nSrcID, nItemIdx, nStreamID_itemnum, nItemID);
+                    db.PutRawValue(nSrcID, nItemIdx, nStreamID_storenum, store.StoreNum);
+                    db.PutRawValue(nSrcID, nItemIdx, nStreamID_storecityid, store.CityID);
+                    db.PutRawValue(nSrcID, nItemIdx, nStreamID_storestateid, store.StateID);
+                    db.PutRawValue(nSrcID, nItemIdx, nStreamID_storetypeid, store.TypeID);
+                    db.PutRawValue(nSrcID, nItemIdx, nStreamID_storecluster, store.Cluster);
+                    db.PutRawValue(nSrcID, nItemIdx, nStreamID_familyid, item.FamilyID);
+                    db.PutRawValue(nSrcID, nItemIdx, nStreamID_classid, item.ClassID);
+                    db.PutRawValue(nSrcID, nItemIdx, nStreamID_perishable, item.Perishable);
+
+                    for (int i=0; i<rgItems.Count; i++)
+                    {
+                        db.PutRawValue(nSrcID, nItemIdx, nStreamID_logsales, rgItems[i].LogSales);
+                        db.PutRawValue(nSrcID, nItemIdx, nStreamID_oilprice, rgItems[i].OilPrice);
+                        db.PutRawValue(nSrcID, nItemIdx, nStreamID_storetrx, rgItems[i].StoreTransactions);
+
+                        db.PutRawValue(nSrcID, nItemIdx, nStreamID_dayofweek, (int)rgItems[i].Date.DayOfWeek);
+                        db.PutRawValue(nSrcID, nItemIdx, nStreamID_dayofmonth, rgItems[i].Date.Day);
+                        db.PutRawValue(nSrcID, nItemIdx, nStreamID_month, rgItems[i].Date.Month);
+                        db.PutRawValue(nSrcID, nItemIdx, nStreamID_onpromotion, rgItems[i].OnPromotion);
+                        db.PutRawValue(nSrcID, nItemIdx, nStreamID_holidaytype, rgItems[i].HolidayType);
+                        db.PutRawValue(nSrcID, nItemIdx, nStreamID_holidaylocaleid, rgItems[i].HolidayLocaleID);
+                    }
+
+                    if (nItemIdx % 1000 == 0)
+                        db.SaveRawValues();
+
+                    if (sw.Elapsed.TotalMilliseconds > 1000)
+                    {
+                        sw.Restart();
+
+                        if (m_evtCancel.WaitOne(0))
+                            break;
+
+                        double dfPct = (double)nItemIdx / (double)nItemCount;
+                        m_log.WriteLine("Store_Item = " + strStoreItem + " - Saving '" + strSub + "' data to sql at " + dfPct.ToString("P") + " complete.");
+                    }
+
+                    db.SaveRawValues();
+                    db.UpdateStreamCounts(nItemIdx, nStreamID_logsales, nStreamID_oilprice, nStreamID_storetrx, nStreamID_onpromotion, nStreamID_onpromotion, nStreamID_dayofweek, nStreamID_dayofmonth, nStreamID_month, nStreamID_itemnum, nStreamID_storenum, nStreamID_storecityid, nStreamID_storetypeid, nStreamID_storecluster, nStreamID_familyid, nStreamID_classid, nStreamID_perishable);
+                    nItemIdx++;
                 }
-
-                nIdx++;
             }
 
-            return true;
-        }
+            db.Close();
 
-        private void save(string strPath, string strUse, string strType, int nStartIdx, int nCount, int[] rgCat, int[] rgCatShape, float[] rgNum, int[] rgNumShape)
-        {
-            int[] rgCat1 = null;
-            int[] rgNum1 = null;
-
-            if (rgCatShape.Last() > 0)
-            {
-                int nItemCount = nCount;
-                int nSpatialDim = 1;
-                for (int i = 1; i < rgCatShape.Length; i++)
-                {
-                    nSpatialDim *= rgCatShape[i];
-                }
-
-                rgCat1 = new int[nItemCount * nSpatialDim];
-
-                Array.Copy(rgCat, 0, rgCat1, nStartIdx * nSpatialDim, nCount * nSpatialDim);
-            }
-
-            if (rgNumShape != null && rgNumShape.Last() > 0)
-            {
-                int nItemCount = nCount;
-                int nSpatialDim = 1;
-                for (int i = 1; i < rgNumShape.Length; i++)
-                {
-                    nSpatialDim *= rgNumShape[i];
-                }
-
-                rgNum1 = new int[nItemCount * nSpatialDim];
-
-                Array.Copy(rgNum, 0, rgNum1, nStartIdx * nSpatialDim, nCount * nSpatialDim);
-            }
-
-            rgCatShape[0] = nCount;
-            Blob<float>.SaveToNumpy(strPath + strUse + "_" + strType + "_categorical.npy", rgCat1, rgCatShape);
-
-            if (rgNumShape != null)
-            {
-                rgNumShape[0] = nCount;
-                Blob<float>.SaveToNumpy(strPath + strUse + "_" + strType + "_numerical.npy", rgNum1, rgNumShape);
-            }
-        }
-
-        private void save(string strPath, string strUse, string strType, int nStartIdx, int nCount, long[] rgTime, int[] rgTimeShape)
-        {
-            int[] rgTime1 = null;
-
-            if (rgTimeShape.Last() > 0)
-            {
-                int nItemCount = nCount;
-                int nSpatialDim = 1;
-
-                rgTime1 = new int[nItemCount * nSpatialDim];
-
-                Array.Copy(rgTime, 0, rgTime1, nStartIdx * nSpatialDim, nCount * nSpatialDim);
-            }
-
-            rgTimeShape[0] = nCount;
-            Blob<float>.SaveToNumpy(strPath + strUse + "_" + strType + "_categorical.npy", rgTime, rgTimeShape);
+            return nSrcID;
         }
 
         public bool SaveData(string strFile)
@@ -658,16 +574,13 @@ namespace DNN.net.dataset.tft.favorita
         Dictionary<DateTime, List<DataRecord>> m_rgRecordsByDate = new Dictionary<DateTime, List<DataRecord>>();
         Dictionary<int, List<DataRecord>> m_rgRecordsByStore = new Dictionary<int, List<DataRecord>>();
         Dictionary<int, List<DataRecord>> m_rgRecordsByItem = new Dictionary<int, List<DataRecord>>();
+        Dictionary<int, Dictionary<int, List<DataRecord>>> m_rgRecordsByStoreItem = new Dictionary<int, Dictionary<int, List<DataRecord>>>();
         List<Tuple<int, int, DateTime>> m_rgIndex = new List<Tuple<int, int, DateTime>>();
         int m_nIdx = 0;
         int m_nCount;
         Log m_log;
         CancelEvent m_evtCancel;
         Stopwatch m_sw = new Stopwatch();
-
-        int m_nStoreIdx = 0;
-        int m_nItemIdx = 0;
-        int m_nDateIdx = 0;
 
         public DataRecordCollection(Log log, CancelEvent evtCancel)
         {
@@ -738,8 +651,24 @@ namespace DNN.net.dataset.tft.favorita
             m_rgRecordsByItem.Clear();
         }
 
+        public Dictionary<int, Dictionary<int, List<DataRecord>>> RecordsByStoreItem
+        {
+            get { return m_rgRecordsByStoreItem; }
+        }
+
+        public void AddRange(List<DataRecord> rg)
+        {
+            foreach (DataRecord rec in rg)
+            {
+                Add(rec);
+            }
+        }
+
         public void Add(DataRecord item)
         {
+            if (!item.IsValid)
+                return;
+
             if (!m_rgRecords.ContainsKey(item.StoreNum))
                 m_rgRecords.Add(item.StoreNum, new Dictionary<int, Dictionary<DateTime, DataRecord>>());
 
@@ -763,6 +692,14 @@ namespace DNN.net.dataset.tft.favorita
                 m_rgRecordsByItem[item.ItemNum].Add(item);
             else
                 m_rgRecordsByItem.Add(item.ItemNum, new List<DataRecord>() { item });
+
+            if (!m_rgRecordsByStoreItem.ContainsKey(item.StoreNum))
+                m_rgRecordsByStoreItem.Add(item.StoreNum, new Dictionary<int, List<DataRecord>>());
+
+            if (!m_rgRecordsByStoreItem[item.StoreNum].ContainsKey(item.ItemNum))
+                m_rgRecordsByStoreItem[item.StoreNum].Add(item.ItemNum, new List<DataRecord>() { item });
+            else
+                m_rgRecordsByStoreItem[item.StoreNum][item.ItemNum].Add(item);
 
             m_nCount++;
         }
@@ -931,50 +868,176 @@ namespace DNN.net.dataset.tft.favorita
         {
             get { return m_nCount; }
         }
+
+        public DataRecordCollection Split(string strName, double dfPctStart, double dfPctEnd)
+        {
+            DataRecordCollection col = new DataRecordCollection(m_log, m_evtCancel);
+            List<KeyValuePair<DateTime, List<DataRecord>>> rgRecords = m_rgRecordsByDate.OrderBy(p => p.Key).ToList();
+            int nStart = (int)(rgRecords.Count * dfPctStart);
+            int nEnd = (int)(rgRecords.Count * dfPctEnd);
+
+            m_sw.Restart();
+            for (int i=nStart; i<nEnd; i++)
+            {
+                col.AddRange(rgRecords[i].Value);
+
+                if (m_sw.Elapsed.TotalMilliseconds > 1000)
+                {
+                    double dfPct = (i - nStart) / (double)(nEnd - nStart);
+                    m_log.WriteLine("Splitting '" + strName + "' at " + dfPct.ToString("P") + "...");
+                    m_sw.Restart();
+                }
+            }
+
+            return col;
+        }
+
+        public void CalculateStatistics(DataRecord.FIELD field, List<DataRecord> col, out double dfMean1, out double dfStdev1, bool bOnlyNonZero = false)
+        {
+            double dfTotal = col.Sum(p => p.Item(field));
+            int nCount = col.Count;
+            if (bOnlyNonZero)
+                nCount = col.Count(p => p.Item(field) != 0);
+
+            double dfMean = dfTotal / nCount;
+            double dfStdev = Math.Sqrt(col.Sum(p => Math.Pow(p.Item(field) - dfMean, 2)) / nCount);
+            dfMean1 = dfMean;
+            dfStdev1 = dfStdev;
+        }
+
+        public void Normalize(DataRecord.FIELD dt, List<DataRecord> col, double dfMean, double dfStdev)
+        {
+            for (int i = 0; i < col.Count; i++)
+            {
+                double dfVal = col[i].Item(dt);
+                dfVal = (dfVal - dfMean) / dfStdev;
+                col[i].NormalizedItem(dt, dfVal);
+            }
+        }
+
+        private void normalize(DataRecord.FIELD field, List<DataRecord> col, Dictionary<DataRecord.FIELD, Tuple<double, double>> rgScalers)
+        {
+            double dfMean;
+            double dfStdev;
+
+            if (rgScalers.ContainsKey(field))
+            {
+                dfMean = rgScalers[field].Item1;
+                dfStdev = rgScalers[field].Item2;
+            }
+            else
+            {
+                CalculateStatistics(field, col, out dfMean, out dfStdev, true);
+                rgScalers.Add(field, new Tuple<double, double>(dfMean, dfStdev));
+            }
+
+            Normalize(field, col, dfMean, dfStdev);
+        }
+
+        public bool Normalize(Stopwatch sw, Log log, CancelEvent evtCancel, Dictionary<int, Dictionary<int, Dictionary<DataRecord.FIELD, Tuple<double, double>>>> rgScalers)
+        {
+            int nTotal = m_rgRecordsByStoreItem.Sum(p => p.Value.Count);
+            int nIdx = 0;
+            sw.Restart();
+
+            foreach (KeyValuePair<int, Dictionary<int, List<DataRecord>>> kv in m_rgRecordsByStoreItem)
+            {
+                if (!rgScalers.ContainsKey(kv.Key))
+                    rgScalers.Add(kv.Key, new Dictionary<int, Dictionary<DataRecord.FIELD, Tuple<double, double>>>());
+
+                foreach (KeyValuePair<int, List<DataRecord>> kv1 in kv.Value)
+                {
+                    Dictionary<DataRecord.FIELD, Tuple<double, double>> rgScalers1;
+
+                    if (!rgScalers[kv.Key].ContainsKey(kv1.Key))
+                        rgScalers[kv.Key].Add(kv1.Key, new Dictionary<DataRecord.FIELD, Tuple<double, double>>());
+
+                    rgScalers1 = rgScalers[kv.Key][kv1.Key];
+
+                    normalize(DataRecord.FIELD.LOG_UNIT_SALES, kv1.Value, rgScalers1);
+                    normalize(DataRecord.FIELD.OIL_PRICE, kv1.Value, rgScalers1);
+                    normalize(DataRecord.FIELD.STORE_TRANSACTIONS, kv1.Value, rgScalers1);
+                    normalize(DataRecord.FIELD.DAY_OF_WEEK, kv1.Value, rgScalers1);
+                    normalize(DataRecord.FIELD.DAY_OF_MONTH, kv1.Value, rgScalers1);
+                    normalize(DataRecord.FIELD.MONTH, kv1.Value, rgScalers1);
+
+                    if (sw.Elapsed.TotalMilliseconds > 1000)
+                    {
+                        sw.Restart();
+
+                        double dfPct = (double)nIdx / nTotal;
+                        log.WriteLine("Normalizing data at " + dfPct.ToString("P") + " complete.");
+
+                        if (evtCancel.WaitOne(0))
+                            return false;
+                    }
+
+                    nIdx++;
+                }
+            }
+
+            return true;
+        }
     }
 
     public class DataRecord
     {
         int m_nID;
         DateTime m_dt;                  // 0 hist/fut num (unix time)
-        // day of week                  // 1 hist/fut num 
-        // day of month                 // 2 hist/fut num
-        // month                        // 3 hist/fut num
+        double[] m_rgFields = new double[19];
+        double[] m_rgFieldsNormalized = new double[19];
+        bool m_bValid = true;
 
-        int m_nStoreNum;                // static cat 0
-        int m_nStoreCityID;             // static cat 1
-        int m_nStoreStateID;            // static cat 2
-        int m_nStoreTypeID;             // static cat 3
-        int m_nStoreCluster;            // static cat 4
-        int m_nStoreTransactions;       // hist num 0
-
-        int m_nItemNum;                 // static cat 5
-        int m_nItemFamilyID;            // static cat 6
-        int m_nItemClassID;             // static cat 7
-        int m_nItemPerishable;          // static cat 8
-
-        float m_fUnitSales;         
-        float m_fLogSales;              // 4 past num
-
-        int m_nOnPromotion;             // static cat 9
-
-        float m_fOilPrice;              // 5 hist num
-
-        int m_nHolidayType;             // 0 hist cat
-        int m_nHolidayLocaleID;         // 1 hist cat
+        public enum FIELD
+        {
+            UNIT_SALES = 0,
+            LOG_UNIT_SALES = 1,         // 0 hist num
+            OIL_PRICE = 2,              // 1 hist num
+            STORE_TRANSACTIONS = 3,     // 2 hist num
+            DAY_OF_WEEK = 4,            // 3 hist/fut num
+            DAY_OF_MONTH = 5,           // 4 hist/fut num
+            MONTH = 6,                  // 5 hist/fut num
+            STORE_NUM = 7,              // static cat 0
+            STORE_CITY_ID = 8,          // static cat 1
+            STORE_STATE_ID = 9,         // static cat 2
+            STORE_TYPE_ID = 10,          // static cat 3
+            STORE_CLUSTER = 11,         // static cat 4
+            ITEM_NUM = 12,              // static cat 5
+            ITEM_FAMILY_ID = 13,        // static cat 6
+            ITEM_CLASS_ID = 14,         // static cat 7
+            ITEM_PERISHABLE = 15,       // static cat 8
+            ON_PROMOTION = 16,          // static cat 9
+            HOLIDAY_TYPE = 17,          // 0 hist/fut cat
+            HOLIDAY_LOCALE_ID = 18      // 1 hist/fut cat
+        }
 
         public DataRecord(DateTime dt, string[] rgstr)
         {
             m_nID = int.Parse(rgstr[0]);
             m_dt = dt;
-            m_nStoreNum = int.Parse(rgstr[2]);
-            m_nItemNum = int.Parse(rgstr[3]);
-            m_fUnitSales = float.Parse(rgstr[4]);
-            m_fLogSales = (float)Math.Log(m_fUnitSales);
+            int nStoreNum = int.Parse(rgstr[2]);
+            int nItemNum = int.Parse(rgstr[3]);
+            float fUnitSales = float.Parse(rgstr[4]);
+            float fLogSales = (float)Math.Log(fUnitSales);
 
-            m_nOnPromotion = 0;
+            if (double.IsNaN(fLogSales) || double.IsInfinity(fLogSales))
+            {
+                m_bValid = false;
+                fLogSales = 0;
+            }
+
+            int nOnPromotion = 0;
             if (rgstr[5].ToLower() == "true")
-                m_nOnPromotion = 1;
+                nOnPromotion = 1;
+
+            m_rgFields[(int)FIELD.UNIT_SALES] = fUnitSales;
+            m_rgFields[(int)FIELD.LOG_UNIT_SALES] = fLogSales;
+            m_rgFields[(int)FIELD.ON_PROMOTION] = nOnPromotion;
+            m_rgFields[(int)FIELD.STORE_NUM] = nStoreNum;
+            m_rgFields[(int)FIELD.ITEM_NUM] = nItemNum;
+            m_rgFields[(int)FIELD.DAY_OF_WEEK] = (int)dt.DayOfWeek;
+            m_rgFields[(int)FIELD.DAY_OF_MONTH] = dt.Day;
+            m_rgFields[(int)FIELD.MONTH] = dt.Month;
         }
 
         public static DataRecord Parse(string[] rgstr, DateTime dtStart, DateTime dtEnd)
@@ -994,9 +1057,34 @@ namespace DNN.net.dataset.tft.favorita
             return "id,store_nbr,item_nbr,unit_sales,onpromotion,traj_id,unique_id,open,date,log_sales,city,state,type,cluster,family,class,perishable,transaction,day_of_week,day_of_month,month,national_hol,regional_hol,local_hol";
         }
 
+        public bool IsValid
+        {
+            get { return m_bValid; }
+        }   
+
+        public double Item(FIELD field)
+        {
+            return m_rgFields[(int)field];
+        }
+
+        public void Item(FIELD field, double dfVal)
+        {
+            m_rgFields[(int)field] = dfVal;
+        }
+
+        public double NormalizedItem(FIELD field)
+        {
+            return m_rgFieldsNormalized[(int)field];
+        }
+
+        public void NormalizedItem(FIELD field, double dfVal)
+        {
+            m_rgFieldsNormalized[(int)field] = dfVal;
+        }
+
         public static int NumStaticCategorical
         {
-            get { return 10;  }
+            get { return 9;  }
         }
 
         public static int NumStaticNumeric
@@ -1006,7 +1094,7 @@ namespace DNN.net.dataset.tft.favorita
 
         public static int NumHistoricalCategorical
         {
-            get { return 2; }
+            get { return 3; }
         }
 
         public static int NumHistoricalNumeric
@@ -1016,7 +1104,7 @@ namespace DNN.net.dataset.tft.favorita
 
         public static int NumFutureCategorical
         {
-            get { return 0; }
+            get { return 3; }
         }
 
         public static int NumFutureNumeric
@@ -1027,13 +1115,15 @@ namespace DNN.net.dataset.tft.favorita
         public string ToString(int nIdx, Dictionary<int, StoreRecord> rgStores, Dictionary<int, ItemRecord> rgItems, Dictionary<DateTime, HolidayRecord> rgHolidaysLocal, Dictionary<DateTime, HolidayRecord> rgHolidaysRegional, Dictionary<DateTime, HolidayRecord> rgHolidaysNational)
         {
             StringBuilder sb = new StringBuilder();
-            string strStoreNum = m_nStoreNum.ToString();
-            string strItemNum = m_nItemNum.ToString();
+            int nStoreNum = (int)m_rgFields[(int)FIELD.STORE_NUM];
+            int nItemNum = (int)m_rgFields[(int)FIELD.ITEM_NUM];
+            string strStoreNum = nStoreNum.ToString();
+            string strItemNum =  nItemNum.ToString();
             string strTrajID = strStoreNum + "_" + strItemNum;
             string strDate = m_dt.ToString("yyyy-MM-dd");
             string strUniqueID = strTrajID + "_" + strDate;
-            StoreRecord store = rgStores[m_nStoreNum];
-            ItemRecord item = rgItems[m_nItemNum];
+            StoreRecord store = rgStores[nStoreNum];
+            ItemRecord item = rgItems[nItemNum];
             HolidayRecord holidayLocal = null;
             HolidayRecord holidayRegional = null;
             HolidayRecord holidayNational = null;
@@ -1051,9 +1141,9 @@ namespace DNN.net.dataset.tft.favorita
             sb.Append(',');
             sb.Append(strItemNum);
             sb.Append(',');
-            sb.Append(m_fUnitSales.ToString());
+            sb.Append(m_rgFields[(int)FIELD.UNIT_SALES].ToString("N0"));
             sb.Append(',');
-            sb.Append(m_nOnPromotion == 0 ? "FALSE" : "TRUE"); 
+            sb.Append(m_rgFields[(int)FIELD.ON_PROMOTION] == 0 ? "FALSE" : "TRUE"); 
             sb.Append(',');
             sb.Append(strTrajID);
             sb.Append(',');
@@ -1062,7 +1152,7 @@ namespace DNN.net.dataset.tft.favorita
             sb.Append("1,");
             sb.Append(strDate);
             sb.Append(',');
-            sb.Append(m_fLogSales.ToString());
+            sb.Append(m_rgFields[(int)FIELD.LOG_UNIT_SALES].ToString());
             sb.Append(',');
             sb.Append(store.City);
             sb.Append(',');
@@ -1078,7 +1168,7 @@ namespace DNN.net.dataset.tft.favorita
             sb.Append(',');
             sb.Append(item.Perishable.ToString());
             sb.Append(',');
-            sb.Append(m_nStoreTransactions.ToString());
+            sb.Append(m_rgFields[(int)FIELD.STORE_TRANSACTIONS].ToString());
             sb.Append(',');
             sb.Append(((int)m_dt.DayOfWeek).ToString());
             sb.Append(',');
@@ -1116,41 +1206,41 @@ namespace DNN.net.dataset.tft.favorita
 
         public void AddStoreInfo(StoreRecord store)
         {
-            if (m_nStoreNum != store.StoreNum)
+            if (StoreNum != store.StoreNum)
                 throw new Exception("Store number mismatch.");
 
-            m_nStoreCityID = store.CityID;
-            m_nStoreStateID = store.StateID;
-            m_nStoreTypeID = store.TypeID;
-            m_nStoreCluster = store.Cluster;
+            StoreCityID = store.CityID;
+            StoreStateID = store.StateID;
+            StoreTypeID = store.TypeID;
+            StoreCluster = store.Cluster;
         }
 
         public void AddItemInfo(ItemRecord item)
         {
-            if (m_nItemNum != item.ItemNum)
+            if (ItemNum != item.ItemNum)
                 throw new Exception("Item number mismatch.");
 
-            m_nItemFamilyID = item.FamilyID;
-            m_nItemClassID = item.ClassID;
-            m_nItemPerishable = item.Perishable;
+            ItemFamilyID = item.FamilyID;
+            ItemClassID = item.ClassID;
+            ItemPerishable = item.Perishable;
         }
 
         public void AddHolidayInfo(HolidayRecord holiday)
         {
-            m_nHolidayType = 0;
-            m_nHolidayLocaleID = 0;
+            HolidayType = 0;
+            HolidayLocaleID = 0;
 
             if (m_dt == holiday.Date)
             { 
-                m_nHolidayType = holiday.HolidayType;
-                m_nHolidayLocaleID = holiday.HolidayLocaleID;
+                HolidayType = holiday.HolidayType;
+                HolidayLocaleID = holiday.HolidayLocaleID;
             }
         }
 
         public void AddTransactionInfo(TransactionRecord trx)
         {
-            if (m_nStoreNum == trx.StoreNum)
-                m_nStoreTransactions = trx.TransactionCount;
+            if (StoreNum == trx.StoreNum)
+                StoreTransactions = trx.TransactionCount;
         }
 
         public int ID
@@ -1170,78 +1260,94 @@ namespace DNN.net.dataset.tft.favorita
 
         public int StoreNum
         {
-            get { return m_nStoreNum; }
+            get { return (int)m_rgFields[(int)FIELD.STORE_NUM]; }
         }
 
         public int StoreCityID
         {
-            get { return m_nStoreCityID; }
+            get { return (int)m_rgFields[(int)FIELD.STORE_CITY_ID]; }
+            set { m_rgFields[(int)FIELD.STORE_CITY_ID] = value; }
         }
 
         public int StoreStateID
         {
-            get { return m_nStoreStateID; }
+            get { return (int)m_rgFields[(int)FIELD.STORE_STATE_ID]; }
+            set { m_rgFields[(int)FIELD.STORE_STATE_ID] = value; }
         }
 
         public int StoreTypeID
         {
-            get { return m_nStoreTypeID; }
+            get { return (int)m_rgFields[(int)FIELD.STORE_TYPE_ID]; }
+            set { m_rgFields[(int)FIELD.STORE_TYPE_ID] = value; }
         }
 
         public int StoreCluster
         {
-            get { return m_nStoreCluster; }
+            get { return (int)m_rgFields[(int)FIELD.STORE_CLUSTER]; }
+            set { m_rgFields[(int)FIELD.STORE_CLUSTER] = value; }
+        }
+
+        public int StoreTransactions
+        {
+            get { return (int)m_rgFields[(int)FIELD.STORE_TRANSACTIONS]; }
+            set { m_rgFields[(int)FIELD.STORE_TRANSACTIONS] = value; }
         }
 
         public int ItemNum
         {
-            get { return m_nItemNum; }
+            get { return (int)m_rgFields[(int)FIELD.ITEM_NUM]; }
+            set { m_rgFields[(int)FIELD.ITEM_NUM] = value; }
         }
 
         public int ItemFamilyID
         {
-            get { return m_nItemFamilyID; }
+            get { return (int)m_rgFields[(int)FIELD.ITEM_FAMILY_ID]; }
+            set { m_rgFields[(int)FIELD.ITEM_FAMILY_ID] = value; }
         }
 
         public int ItemClassID
         {
-            get { return m_nItemClassID; }
+            get { return (int)m_rgFields[(int)FIELD.ITEM_CLASS_ID]; }
+            set { m_rgFields[(int)FIELD.ITEM_CLASS_ID] = value; }
         }
 
         public int ItemPerishable
         {
-            get { return m_nItemPerishable; }
+            get { return (int)m_rgFields[(int)FIELD.ITEM_PERISHABLE]; }
+            set { m_rgFields[(int)FIELD.ITEM_PERISHABLE] = value; }
         }
 
         public float UnitSales
         {
-            get { return m_fUnitSales; }
+            get { return (float)m_rgFields[(int)FIELD.UNIT_SALES]; }
         }
 
         public float LogSales
         {
-            get { return m_fLogSales; }
+            get { return (float)m_rgFields[(int)FIELD.LOG_UNIT_SALES]; }
         }
 
         public int OnPromotion
         {
-            get { return m_nOnPromotion; }
+            get { return (int)m_rgFields[(int)FIELD.ON_PROMOTION]; }
         }
 
         public float OilPrice
         {
-            get { return m_fOilPrice; }
-            set { m_fOilPrice = value; }
+            get { return (float)m_rgFields[(int)FIELD.OIL_PRICE]; }
+            set { m_rgFields[(int)FIELD.OIL_PRICE] = value; }
         }
 
         public int HolidayType
         {
-            get { return m_nHolidayType; }
+            get { return (int)m_rgFields[(int)FIELD.HOLIDAY_TYPE]; }
+            set { m_rgFields[(int)FIELD.HOLIDAY_TYPE] = value; }
         }
 
         public int HolidayLocaleID
         {
-            get { return m_nHolidayLocaleID; }
+            get { return (int)m_rgFields[(int)FIELD.HOLIDAY_LOCALE_ID]; }
+            set { m_rgFields[(int)FIELD.HOLIDAY_LOCALE_ID] = value; }
         }
     }
 
