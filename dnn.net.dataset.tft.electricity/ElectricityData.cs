@@ -139,26 +139,38 @@ namespace DNN.net.dataset.tft.electricity
             int nSrcID = db.AddSource(strName + "." + strSub, m_rgCustomers.Count, 3, m_data.RecordsPerCustomer, true, 0, false);
             int nItemCount = 0;
             int nItemIdx = 0;
+            int nTotalSteps = m_data.RecordsByCustomer.Max(p => p.Value.Items.Count);
+            int nSecPerStep = 60 * 60;
 
             db.Open(nSrcID);
             db.EnableBulk(true);
+
+            DateTime dtStart = new DateTime(2017, 1, 1);
+            DateTime dtEnd = dtStart + TimeSpan.FromHours(nTotalSteps);
+
+            int nOrdering = 0;
+            int nStreamID_logpoweruseage = db.AddValueStream(nSrcID, "Log Power Usage", nOrdering++, ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, dtStart, dtEnd, nSecPerStep, nTotalSteps);
+            int nStreamID_hour = db.AddValueStream(nSrcID, "Hour", nOrdering++, ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, dtStart, dtEnd, nSecPerStep, nTotalSteps);
+            int nStreamID_hourfromstart = db.AddValueStream(nSrcID, "Hour from Start", nOrdering++, ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, dtStart, dtEnd, nSecPerStep, nTotalSteps);           
+            int nStreamID_customerid = db.AddValueStream(nSrcID, "Customer ID", nOrdering++, ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL);
+
+            RawValueDataCollection dataStatic = new RawValueDataCollection(null);
+            dataStatic.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_customerid));
+
+            RawValueDataCollection data = new RawValueDataCollection(null);
+            data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_logpoweruseage));
+            data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_hour));
+            data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_hourfromstart));
 
             foreach (KeyValuePair<int, DataRecordCollection> kv in m_data.RecordsByCustomer)
             {
                 int nCustomerID = kv.Key;
                 string strCustomer = m_rgCustomers[nCustomerID];
                 int nItemID = db.AddValueItem(nSrcID, nItemIdx, strCustomer);
+
+                dataStatic.SetData(new float[] { nCustomerID - 1 });
+                db.PutRawValue(nSrcID, nItemID, dataStatic);
                 nItemIdx++;
-
-                DateTime dtStart = new DateTime(2017, 1, 1);
-                DateTime dtEnd = dtStart + TimeSpan.FromHours(kv.Value.Items.Last().HoursFromStart);
-
-                int nStreamID_logpoweruseage = db.AddObservedValueStream(nSrcID, nItemID, "Log Power Usage", ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, 1, dtStart, dtEnd, 60 * 60);
-                int nStreamID_hour = db.AddKnownValueStream(nSrcID, nItemID, "Hour", ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, 2, dtStart, dtEnd, 60 * 60);
-                int nStreamID_hourfromstart = db.AddKnownValueStream(nSrcID, nItemID, "Hour from Start", ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, 3, dtStart, dtEnd, 60 * 60);
-                int nStreamID_customerid = db.AddStaticValueStream(nSrcID, nItemID, "Customer ID", ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, 4);
-
-                db.PutRawValue(nSrcID, nItemID, nStreamID_customerid, nCustomerID - 1);
 
                 float fLast = 0;
                 float fLastNorm = 0;
@@ -166,21 +178,19 @@ namespace DNN.net.dataset.tft.electricity
                 foreach (DataRecord rec in kv.Value.Items)
                 {
                     DateTime dt = dtStart + TimeSpan.FromHours(rec.HoursFromStart);
+                    List<float> rgfData = new List<float>();
 
                     if (rec.IsValid)
                     {
                         fLast = (float)rec.LogPowerUsage;
                         fLastNorm = (float)rec.NormalizedLogPowerUsage;
-                        db.PutRawValue(nSrcID, nItemID, nStreamID_logpoweruseage, dt, fLast, fLastNorm, rec.IsValid, m_log);
-                        db.PutRawValue(nSrcID, nItemID, nStreamID_hour, dt, (float)rec.Hour, (float)rec.NormalizedHour, rec.IsValid, m_log);
-                        db.PutRawValue(nSrcID, nItemID, nStreamID_hourfromstart, dt, (float)rec.HoursFromStart, (float)rec.NormalizedHourFromStart, rec.IsValid, m_log);
                     }
-                    else if (fLast != 0)
-                    {
-                        db.PutRawValue(nSrcID, nItemID, nStreamID_logpoweruseage, dt, fLast, fLastNorm, true, m_log);
-                        db.PutRawValue(nSrcID, nItemID, nStreamID_hour, dt, (float)rec.Hour, (float)rec.NormalizedHour, true, m_log);
-                        db.PutRawValue(nSrcID, nItemID, nStreamID_hourfromstart, dt, (float)rec.HoursFromStart, (float)rec.NormalizedHourFromStart, true, m_log);
-                    }
+
+                    rgfData.Add(fLastNorm);
+                    rgfData.Add((float)rec.NormalizedHour);
+                    rgfData.Add((float)rec.NormalizedHourFromStart);
+                    data.SetData(dt, rgfData.ToArray());
+                    db.PutRawValue(nSrcID, nItemID, data);
 
                     nIdx++;
                     nItemCount++;
@@ -201,7 +211,6 @@ namespace DNN.net.dataset.tft.electricity
                 }
 
                 db.SaveRawValues();
-                db.UpdateStreamCounts(nItemID, nStreamID_logpoweruseage, nStreamID_hour, nStreamID_hourfromstart);
 
                 if (m_evtCancel.WaitOne(0))
                     break;
