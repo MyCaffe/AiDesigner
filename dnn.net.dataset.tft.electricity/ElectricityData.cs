@@ -162,6 +162,8 @@ namespace DNN.net.dataset.tft.electricity
             data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_hour));
             data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_hourfromstart));
 
+            List<DateTime> rgTimeSync = m_data.GetTimeSync();
+
             foreach (KeyValuePair<int, DataRecordCollection> kv in m_data.RecordsByCustomer)
             {
                 int nCustomerID = kv.Key;
@@ -174,23 +176,35 @@ namespace DNN.net.dataset.tft.electricity
 
                 float fLast = 0;
                 float fLastNorm = 0;
+                bool bStartAdding = false;
 
-                foreach (DataRecord rec in kv.Value.Items)
-                {
+                int nDataIdx = 0;
+                for (int i=0; i<rgTimeSync.Count; i++)
+                { 
+                    DataRecord rec = kv.Value.Items[nDataIdx];
                     DateTime dt = dtStart + TimeSpan.FromHours(rec.HoursFromStart);
                     List<float> rgfData = new List<float>();
 
-                    if (rec.IsValid)
+                    if (rgTimeSync[i] == rec.Date)
                     {
-                        fLast = (float)rec.LogPowerUsage;
-                        fLastNorm = (float)rec.NormalizedLogPowerUsage;
+                        if (rec.IsValid)
+                        {
+                            fLast = (float)rec.LogPowerUsage;
+                            fLastNorm = (float)rec.NormalizedLogPowerUsage;
+                            bStartAdding = true;
+                        }
+
+                        nDataIdx++;
                     }
 
-                    rgfData.Add(fLastNorm);
-                    rgfData.Add((float)rec.NormalizedHour);
-                    rgfData.Add((float)rec.NormalizedHourFromStart);
-                    data.SetData(dt, rgfData.ToArray());
-                    db.PutRawValue(nSrcID, nItemID, data);
+                    if (bStartAdding)
+                    {
+                        rgfData.Add(fLastNorm);
+                        rgfData.Add((float)rec.NormalizedHour);
+                        rgfData.Add((float)rec.NormalizedHourFromStart);
+                        data.SetData(dt, rgfData.ToArray());
+                        db.PutRawValue(nSrcID, nItemID, data);
+                    }
 
                     nIdx++;
                     nItemCount++;
@@ -759,6 +773,21 @@ namespace DNN.net.dataset.tft.electricity
             }
 
             return dt;
+        }
+
+        public List<DateTime> GetTimeSync()
+        {
+            DateTime dtMin = m_rgRecordsByCustomer.Min(p => p.Value.Items.Min(p2 => p2.Date));
+            DateTime dtMax = m_rgRecordsByCustomer.Max(p => p.Value.Items.Max(p2 => p2.Date));
+            TimeSpan tsInc = TimeSpan.FromHours(1);
+
+            List<DateTime> rgTimeSync = new List<DateTime>();
+            for (DateTime dt = dtMin; dt <= dtMax; dt += tsInc)
+            {
+                rgTimeSync.Add(dt);
+            }
+
+            return rgTimeSync;
         }
 
         public void Add(DataRecord rec)
