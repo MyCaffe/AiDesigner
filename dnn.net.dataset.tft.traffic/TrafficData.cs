@@ -352,7 +352,10 @@ namespace DNN.net.dataset.tft.traffic
             {
                 int nStationID = kv.Key;
                 string strStation = m_rgStations[nStationID];
-                int nItemID = db.AddValueItem(nSrcID, nItemIdx, strStation);
+                DateTime dtStart1 = kv.Value[0].Date;
+                DateTime dtEnd1 = kv.Value[kv.Value.Count - 1].Date;
+                int nSteps = kv.Value.Count;
+                int nItemID = db.AddValueItem(nSrcID, nItemIdx, strStation, dtStart1, dtEnd1, nSteps);
                 nItemIdx++;
 
                 dataStatic.SetData(new float[] { nStationID });

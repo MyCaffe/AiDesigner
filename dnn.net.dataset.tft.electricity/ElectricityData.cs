@@ -168,7 +168,10 @@ namespace DNN.net.dataset.tft.electricity
             {
                 int nCustomerID = kv.Key;
                 string strCustomer = m_rgCustomers[nCustomerID];
-                int nItemID = db.AddValueItem(nSrcID, nItemIdx, strCustomer);
+                DateTime dtStart1 = kv.Value[0].Date;
+                DateTime dtEnd1 = kv.Value[kv.Value.Count - 1].Date;
+                int nSteps = kv.Value.Count;
+                int nItemID = db.AddValueItem(nSrcID, nItemIdx, strCustomer, dtStart1, dtEnd1, nSteps);
 
                 dataStatic.SetData(new float[] { nCustomerID - 1 });
                 db.PutRawValue(nSrcID, nItemID, dataStatic);
