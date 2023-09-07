@@ -29,8 +29,8 @@ namespace DNN.net.dataset.tft.electricity
 
         public enum OUTPUT_TYPE
         {
-            NPY,
-            SQL
+            NPY = 0,
+            SQL = 1
         }
 
         public DatasetCreatorComponent()
@@ -85,7 +85,7 @@ namespace DNN.net.dataset.tft.electricity
             config.Settings.Add(new DataConfigSetting("Train Split", Properties.Settings.Default.TrainingSplitPct, DataConfigSetting.TYPE.REAL));
             config.Settings.Add(new DataConfigSetting("Test Split", Properties.Settings.Default.TestingSplitPct, DataConfigSetting.TYPE.REAL));
             config.Settings.Add(new DataConfigSetting("Validation Split", Properties.Settings.Default.ValidSplitPct, DataConfigSetting.TYPE.REAL));
-            addList(config, "Output Format", outType, OUTPUT_TYPE.NPY, OUTPUT_TYPE.SQL);
+            addList(config, "Output Format", outType, /*OUTPUT_TYPE.NPY,*/ OUTPUT_TYPE.SQL);
         }
 
         public void Create(DatasetConfiguration config, IXDatasetCreatorProgress progress)
@@ -143,6 +143,7 @@ namespace DNN.net.dataset.tft.electricity
 
                     switch (outType)
                     {
+                        // DEPRECIATED
                         case OUTPUT_TYPE.NPY:
                             dataTrain.SaveAsNumpy(strOutputPath, "train");
                             dataTest.SaveAsNumpy(strOutputPath, "test");

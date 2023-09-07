@@ -566,11 +566,16 @@ namespace DNN.net.dataset.tft.electricity
 
         public void Normalize(DataRecord.FIELD dt, double dfMean, double dfStdev)
         {
+            double dfLast = 0;
+
             for (int i = 0; i < m_rgItems.Count; i++)
             {
                 double? dfVal = m_rgItems[i].Item(dt);
                 if (dfVal.HasValue)
                 {
+                    if (dfVal.Value == 0 && dfLast != 0)
+                        dfVal = dfLast;
+
                     if (dfMean != 0 && dfStdev != 0)
                     {
                         dfVal = (dfVal.Value - dfMean) / dfStdev;
@@ -580,6 +585,8 @@ namespace DNN.net.dataset.tft.electricity
 
                         m_rgItems[i].ItemNormalized(dt, dfVal.Value);
                     }
+
+                    dfLast = dfVal.Value;   
                 }
             }
         }
