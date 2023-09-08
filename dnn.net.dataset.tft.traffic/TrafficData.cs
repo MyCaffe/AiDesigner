@@ -413,6 +413,7 @@ namespace DNN.net.dataset.tft.traffic
             return nSrcID;
         }
 
+        //[DEPRECIATED]
         public bool SaveAsNumpy(string strPath, string strSub)
         {
             string strPath1 = strPath + "\\preprocessed";
