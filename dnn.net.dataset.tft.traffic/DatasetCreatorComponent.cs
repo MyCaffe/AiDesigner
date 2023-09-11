@@ -29,7 +29,7 @@ namespace DNN.net.dataset.tft.traffic
 
         public enum OUTPUT_TYPE
         {
-            NPY = 0,
+            NPY = 0, // DEPRECIATED
             SQL = 1
         }
 
@@ -93,7 +93,7 @@ namespace DNN.net.dataset.tft.traffic
             config.Settings.Add(new DataConfigSetting("Train Split", Properties.Settings.Default.TrainingSplitPct, DataConfigSetting.TYPE.REAL));
             config.Settings.Add(new DataConfigSetting("Test Split", Properties.Settings.Default.TestingSplitPct, DataConfigSetting.TYPE.REAL));
             config.Settings.Add(new DataConfigSetting("Validation Split", Properties.Settings.Default.ValidSplitPct, DataConfigSetting.TYPE.REAL));
-            addList(config, "Output Format", outType, /*OUTPUT_TYPE.NPY,*/ OUTPUT_TYPE.SQL);
+            addList(config, "Output Format", outType, OUTPUT_TYPE.NPY, OUTPUT_TYPE.SQL);
         }
 
         public void Create(DatasetConfiguration config, IXDatasetCreatorProgress progress)

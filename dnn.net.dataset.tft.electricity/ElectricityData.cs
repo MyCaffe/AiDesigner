@@ -239,7 +239,6 @@ namespace DNN.net.dataset.tft.electricity
             return nSrcID;
         }
 
-        //[DEPRECIATED]
         public bool SaveAsNumpy(string strPath, string strSub)
         {
             string strPath1 = strPath + "\\preprocessed";
