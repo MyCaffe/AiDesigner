@@ -220,9 +220,12 @@ namespace DNN.net.dataset.tft.volatility
                 string strSymbol = m_symbols.GetItem(nSymbolID);
                 int nRegionID = m_rgSymbolToRegionMap[strSymbol];
                 string strRegion = m_region.GetItem(nRegionID);
+                DateTime dtStart1 = kv.Value[0].Date;
+                DateTime dtEnd1 = kv.Value[kv.Value.Count - 1].Date;
+                int nSteps = kv.Value.Count;
                 int nItemID = 0;
 
-                nItemID = db.AddValueItem(nSrcID, nItemIdx, strRegion + strSymbol);
+                nItemID = db.AddValueItem(nSrcID, nItemIdx, strRegion + strSymbol, dtStart1, dtEnd1, nSteps);
                 nItemIdx++;
 
                 dataStatic.SetData(new float[] { nRegionID });
@@ -478,7 +481,7 @@ namespace DNN.net.dataset.tft.volatility
                     tw.WriteStartElement("Field");
                         tw.WriteAttributeString("Index", "0");
                         tw.WriteAttributeString("DataType", "REAL");
-                        tw.WriteAttributeString("InputType", "TARGET");
+                        tw.WriteAttributeString("InputType", "OBSERVED,TARGET");
                         tw.WriteValue("log vol");
                     tw.WriteEndElement();
 
