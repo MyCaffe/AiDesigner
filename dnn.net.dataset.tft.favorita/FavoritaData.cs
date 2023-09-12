@@ -90,6 +90,8 @@ namespace DNN.net.dataset.tft.favorita
             if (!m_rgRecords.AddOil(m_rgOil))
                 return false;
 
+            m_rgTimeSync = m_rgRecords.LoadTimeSync();
+
             return true;
         }
 
@@ -418,11 +420,14 @@ namespace DNN.net.dataset.tft.favorita
             return true;
         }
 
-        public FavoritaData SplitData(string strName, double dfPctStart, double dfPctEnd)
+        public FavoritaData SplitData(string strName, double dfPctStart, double dfPctEnd, int nHistCount, int nFutureCount)
         {
             FavoritaData data = new FavoritaData(m_rgFiles, m_log, m_evtCancel);
 
-            data.m_rgRecords = m_rgRecords.Split(strName, dfPctStart, dfPctEnd);
+            data.m_rgRecords = m_rgRecords.Split(strName, dfPctStart, dfPctEnd, nHistCount, nFutureCount);
+            if (data.m_rgRecords == null)
+                throw new Exception("The percent start/end (" + dfPctStart.ToString("P") + "/" + dfPctEnd.ToString("P") + ") values are invalid, do not leave enough data for the history/future (" + nHistCount.ToString() + "/" + nFutureCount.ToString() + ") counts specified.");
+
             data.m_rgStores = m_rgStores;
             data.m_rgItems = m_rgItems;
             data.m_rgHolidaysLocal = m_rgHolidaysLocal;
@@ -431,6 +436,7 @@ namespace DNN.net.dataset.tft.favorita
             data.m_rgOil = m_rgOil;
             data.m_rgTrx = m_rgTrx;
             data.m_rgFiles = m_rgFiles;
+            data.m_rgTimeSync = data.m_rgRecords.LoadTimeSync();
 
             return data;
         }
@@ -456,8 +462,8 @@ namespace DNN.net.dataset.tft.favorita
             db.Open(nSrcID);
             db.EnableBulk(true);
 
-            DateTime dtStart = m_dtMin;
-            DateTime dtEnd = m_dtMax;
+            DateTime dtStart = m_rgTimeSync[0];
+            DateTime dtEnd = m_rgTimeSync[m_rgTimeSync.Count-1];
 
             int nOrdering = 0;
             int nStreamID_logsales = db.AddValueStream(nSrcID, "Log Unit Sales", nOrdering++, ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, dtStart, dtEnd, nSecPerStep, nTotalSteps);
@@ -482,39 +488,27 @@ namespace DNN.net.dataset.tft.favorita
             int nStreamID_itemclassid = db.AddValueStream(nSrcID, "Item Class ID", nOrdering++, ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL);
             int nStreamID_itemperishable = db.AddValueStream(nSrcID, "Item Perishable", nOrdering++, ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL);
 
-            RawValueDataCollection dataStatic = new RawValueDataCollection(null)
-            {
-                new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_itemnum),
-                new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_storenum),
-                new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_storecityid),
-                new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_storestateid),
-                new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_storetypeid),
-                new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_itemfamilyid),
-                new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_itemclassid),
-                new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_itemperishable)
-            };
+            RawValueDataCollection dataStatic = new RawValueDataCollection(null);
+            dataStatic.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_itemnum));
+            dataStatic.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_storenum));
+            dataStatic.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_storecityid));
+            dataStatic.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_storestateid));
+            dataStatic.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_storetypeid));
+            dataStatic.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_itemfamilyid));
+            dataStatic.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_itemclassid));
+            dataStatic.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_itemperishable));
 
             RawValueDataCollection data = new RawValueDataCollection(null);
-            {
-                new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_logsales);
-                new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_oilprice);
-                new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_storetrx);
-
-                new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_dayofweek);
-                new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_dayofmonth);
-                new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_month);
-                new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_open);
-                new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_onpromotion);
-                new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_holidaytype);
-                new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_holidaylocaleid);
-            }
-
-            Dictionary<int, int> rgIdxToItemID = new Dictionary<int, int>();
-            List<KeyValuePair<int, ItemRecord>> rgItems1 = m_rgItems.OrderBy(p => p.Key).ToList();
-            for (int i=0; i<rgItems1.Count; i++)
-            {
-                rgIdxToItemID.Add(rgItems1[i].Key, i);
-            }
+            data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_logsales));
+            data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_oilprice));
+            data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_storetrx));
+            data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_dayofweek));
+            data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_dayofmonth));
+            data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_month));
+            data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_open));
+            data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_onpromotion));
+            data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_holidaytype));
+            data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_holidaylocaleid));
 
             foreach (KeyValuePair<int, Dictionary<int, List<DataRecord>>> kv in m_rgRecords.RecordsByStoreItem)
             {
@@ -525,16 +519,20 @@ namespace DNN.net.dataset.tft.favorita
                 foreach (KeyValuePair<int, List<DataRecord>> kv1 in kv.Value)
                 {
                     List<DataRecord> rgItems = kv1.Value.OrderBy(p => p.Date).ToList();
-                    int nItemID = rgIdxToItemID[kv1.Key];
-                    ItemRecord item = m_rgItems[nItemID];
+                    ItemRecord item = m_rgItems[kv1.Key];
                     string strItem = item.ItemNum.ToString();
                     string strStoreItem = strStore + "." + strItem;
+                    DateTime dtStart1 = kv1.Value[0].Date;
+                    DateTime dtEnd1 = kv1.Value[kv1.Value.Count - 1].Date;
+                    int nSteps = kv1.Value.Count;
+
+                    int nItemID = db.AddValueItem(nSrcID, nItemIdx, strStoreItem, dtStart1, dtEnd1, nSteps);
 
                     dataStatic.SetData(new float[] { item.ItemIndex, store.StoreIndex, store.CityID, store.StateID, store.TypeID, item.FamilyID, item.ClassID, item.Perishable });
                     db.PutRawValue(nSrcID, nItemID, dataStatic);
 
                     int nDataIdx = 0;
-                    for (int i=0; i<m_rgTimeSync.Count; i++)
+                    for (int i=0; i<m_rgTimeSync.Count && nDataIdx < rgItems.Count; i++)
                     {
                         DataRecord rec = rgItems[nDataIdx];
 
@@ -919,12 +917,19 @@ namespace DNN.net.dataset.tft.favorita
             get { return m_nCount; }
         }
 
-        public DataRecordCollection Split(string strName, double dfPctStart, double dfPctEnd)
+        public DataRecordCollection Split(string strName, double dfPctStart, double dfPctEnd, int nHistCount, int nFutureCount)
         {
             DataRecordCollection col = new DataRecordCollection(m_log, m_evtCancel);
             List<KeyValuePair<DateTime, List<DataRecord>>> rgRecords = m_rgRecordsByDate.OrderBy(p => p.Key).ToList();
             int nStart = (int)(rgRecords.Count * dfPctStart);
             int nEnd = (int)(rgRecords.Count * dfPctEnd);
+
+            if (nEnd - nStart < nFutureCount)
+                return null;
+
+            nStart -= (nHistCount - 5);
+            if (nStart < 0)
+                nStart = 0;
 
             m_sw.Restart();
             for (int i=nStart; i<nEnd; i++)
@@ -984,17 +989,40 @@ namespace DNN.net.dataset.tft.favorita
             Normalize(field, col, dfMean, dfStdev);
         }
 
+        public List<DateTime> LoadTimeSync()
+        {
+            List<DateTime> rgTimeSync = new List<DateTime>();
+
+            // Walk through the item list at each store and normalize the data.
+            foreach (KeyValuePair<int, Dictionary<int, List<DataRecord>>> kv in m_rgRecordsByStoreItem)
+            {
+                // Walk through each item at the store.
+                foreach (KeyValuePair<int, List<DataRecord>> kv1 in kv.Value)
+                {
+                    foreach (DataRecord rec in kv1.Value)
+                    {
+                        if (!rgTimeSync.Contains(rec.Date))
+                            rgTimeSync.Add(rec.Date);
+                    }
+                }
+            }
+
+            return rgTimeSync.OrderBy(p => p).ToList();
+        }
+
         public bool Normalize(Stopwatch sw, Log log, CancelEvent evtCancel, Dictionary<int, Dictionary<int, Dictionary<DataRecord.FIELD, Tuple<double, double>>>> rgScalers)
         {
             int nTotal = m_rgRecordsByStoreItem.Sum(p => p.Value.Count);
             int nIdx = 0;
             sw.Restart();
 
+            // Walk through the item list at each store and normalize the data.
             foreach (KeyValuePair<int, Dictionary<int, List<DataRecord>>> kv in m_rgRecordsByStoreItem)
             {
                 if (!rgScalers.ContainsKey(kv.Key))
                     rgScalers.Add(kv.Key, new Dictionary<int, Dictionary<DataRecord.FIELD, Tuple<double, double>>>());
 
+                // Walk through each item at the store.
                 foreach (KeyValuePair<int, List<DataRecord>> kv1 in kv.Value)
                 {
                     Dictionary<DataRecord.FIELD, Tuple<double, double>> rgScalers1;

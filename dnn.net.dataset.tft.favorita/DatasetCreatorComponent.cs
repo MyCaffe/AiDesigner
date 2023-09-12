@@ -101,6 +101,8 @@ namespace DNN.net.dataset.tft.favorita
             config.Settings.Add(new DataConfigSetting("Train Split", Properties.Settings.Default.TrainingSplitPct, DataConfigSetting.TYPE.REAL));
             config.Settings.Add(new DataConfigSetting("Test Split", Properties.Settings.Default.TestingSplitPct, DataConfigSetting.TYPE.REAL));
             config.Settings.Add(new DataConfigSetting("Validation Split", Properties.Settings.Default.ValidSplitPct, DataConfigSetting.TYPE.REAL));
+            config.Settings.Add(new DataConfigSetting("History Count", Properties.Settings.Default.HistoryCount, DataConfigSetting.TYPE.INTEGER));
+            config.Settings.Add(new DataConfigSetting("Future Count", Properties.Settings.Default.FutureCount, DataConfigSetting.TYPE.INTEGER));
             addList(config, "Output Format", outType, OUTPUT_TYPE.CSV, OUTPUT_TYPE.SQL);
         }
 
@@ -117,6 +119,8 @@ namespace DNN.net.dataset.tft.favorita
             string strOutputPath = Properties.Settings.Default.OutputPath;
             DateTime dtStart = DateTime.Parse(Properties.Settings.Default.StartDate);
             DateTime dtEnd = DateTime.Parse(Properties.Settings.Default.EndDate);
+            int nHistCount = Properties.Settings.Default.HistoryCount;
+            int nFutureCount = Properties.Settings.Default.FutureCount;
 
             m_evtCancel.Reset();
 
@@ -134,6 +138,8 @@ namespace DNN.net.dataset.tft.favorita
             double dfTrainSplit = (double)config.Settings.Find("Train Split").Value;
             double dfTestSplit = (double)config.Settings.Find("Test Split").Value;
             double dfValSplit = (double)config.Settings.Find("Validation Split").Value;
+            nHistCount = (int)config.Settings.Find("History Count").Value;
+            nFutureCount = (int)config.Settings.Find("Future Count").Value;
 
             DataConfigSetting ds = config.Settings.Find("Output Format");
             OptionItem opt = ds.Value as OptionItem;
@@ -176,9 +182,9 @@ namespace DNN.net.dataset.tft.favorita
 
                 if (data.LoadData(dtStart, dtEnd))
                 {
-                    FavoritaData dataTrain = data.SplitData("train", 0, dfTrainSplit);
-                    FavoritaData dataTest = data.SplitData("test", dfTrainSplit, dfTrainSplit + dfTestSplit);
-                    FavoritaData dataVal = data.SplitData("valid", dfTrainSplit + dfTestSplit, 1);
+                    FavoritaData dataTrain = data.SplitData("train", 0, dfTrainSplit, nHistCount, nFutureCount);
+                    FavoritaData dataTest = data.SplitData("test", dfTrainSplit, dfTrainSplit + dfTestSplit, nHistCount, nFutureCount);
+                    FavoritaData dataVal = data.SplitData("valid", dfTrainSplit + dfTestSplit, 1, nHistCount, nFutureCount);
 
                     Dictionary<int, Dictionary<int, Dictionary<DataRecord.FIELD, Tuple<double, double>>>> rgScalers = new Dictionary<int, Dictionary<int, Dictionary<DataRecord.FIELD, Tuple<double, double>>>>();
                     dataTrain.NormalizeData(rgScalers);
