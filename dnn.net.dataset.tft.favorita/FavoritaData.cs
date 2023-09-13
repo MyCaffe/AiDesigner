@@ -517,6 +517,48 @@ namespace DNN.net.dataset.tft.favorita
             data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_holidaytype));
             data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_holidaylocaleid));
 
+            int nMaxItemIdx = m_rgItems.Max(p => p.Value.ItemIndex);
+            int nMaxStoreIdx = m_rgStores.Max(p => p.Value.StoreIndex);
+            int nMaxCityID = m_rgStores.Max(p => p.Value.CityID);
+            int nMaxStateID = m_rgStores.Max(p => p.Value.StateID);
+            int nMaxTypeID = m_rgStores.Max(p => p.Value.TypeID);
+            int nMaxCluster = m_rgStores.Max(p => p.Value.Cluster);
+            int nMaxFamilyID = m_rgItems.Max(p => p.Value.FamilyID);
+            int nMaxClassID = m_rgItems.Max(p => p.Value.ClassID);
+            int nMaxPerishable = m_rgItems.Max(p => p.Value.Perishable);
+
+            m_log.WriteLine("--Static Categorical Values (9)--");
+            m_log.WriteLine("Max Item Idx = " + nMaxItemIdx.ToString());
+            m_log.WriteLine("Max Store Idx = " + nMaxStoreIdx.ToString());
+            m_log.WriteLine("Max City Id = " + nMaxCityID.ToString());
+            m_log.WriteLine("Max State Id = " + nMaxStateID.ToString());
+            m_log.WriteLine("Max Type Id = " + nMaxTypeID.ToString());
+            m_log.WriteLine("Max Cluster = " + nMaxCluster.ToString());
+            m_log.WriteLine("Max Family Id = " + nMaxFamilyID.ToString());
+            m_log.WriteLine("Max Class Id = " + nMaxClassID.ToString());
+            m_log.WriteLine("Max Perishable = " + nMaxPerishable.ToString());
+
+            int nMaxHolidayLocaleID = 0;
+            int nMaxHolidayType = 0;
+
+            foreach (KeyValuePair<int, Dictionary<int, List<DataRecord>>> kv in m_rgRecords.RecordsByStoreItem)
+            {
+                foreach (KeyValuePair<int, List<DataRecord>> kv1 in kv.Value)
+                {
+                    int nHolidayLocaleID = kv1.Value.Max(p => p.HolidayLocaleID);
+                    int nHolidayType = kv1.Value.Max(p => p.HolidayType);
+
+                    nMaxHolidayLocaleID = Math.Max(nMaxHolidayLocaleID, nHolidayLocaleID);
+                    nMaxHolidayType = Math.Max(nMaxHolidayType, nHolidayType);
+                }
+            }
+
+            m_log.WriteLine("--Historical/Future Categorical Values (4)--");
+            m_log.WriteLine("Max Open: 1");
+            m_log.WriteLine("Max On Promotion: 1");
+            m_log.WriteLine("Max Holiday Local ID" + nMaxHolidayLocaleID.ToString());
+            m_log.WriteLine("Max Holiday Type" + nMaxHolidayType.ToString());
+
             foreach (KeyValuePair<int, Dictionary<int, List<DataRecord>>> kv in m_rgRecords.RecordsByStoreItem)
             {
                 int nStoreID = kv.Key;
