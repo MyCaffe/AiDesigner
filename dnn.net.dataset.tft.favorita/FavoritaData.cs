@@ -41,7 +41,7 @@ namespace DNN.net.dataset.tft.favorita
             m_rgRecords = new DataRecordCollection(log, evtCancel);
         }
 
-        public bool LoadData(DateTime dtStart, DateTime dtEnd)
+        public bool LoadData(DateTime dtStart, DateTime dtEnd, int nMaxLoad)
         {
             m_rgRecords.Clear();
             m_rgStores.Clear();
@@ -51,7 +51,7 @@ namespace DNN.net.dataset.tft.favorita
             m_rgHolidaysLocal.Clear();
             m_rgOil.Clear();
 
-            if (!loadTemporalData("Train", dtStart, dtEnd))
+            if (!loadTemporalData("Train", dtStart, dtEnd, nMaxLoad))
                 return false;
 
             if (!loadStoreData())
@@ -95,7 +95,7 @@ namespace DNN.net.dataset.tft.favorita
             return true;
         }
 
-        private bool loadTemporalData(string strType, DateTime dtStart, DateTime dtEnd)
+        private bool loadTemporalData(string strType, DateTime dtStart, DateTime dtEnd, int nMaxLoad)
         {
             if (strType != "Train" && strType != "Test")
                 throw new Exception("Unknown temporal type '" + strType + "' specified.");
@@ -139,6 +139,12 @@ namespace DNN.net.dataset.tft.favorita
 
                         if (m_evtCancel.WaitOne(0))
                             return false;
+                    }
+
+                    if (nMaxLoad > 0 && m_rgRecords.Count >= nMaxLoad)
+                    {
+                        m_log.WriteLine("Max Load of " + nMaxLoad.ToString() + " hit, loading halted.");
+                        break;
                     }
                 }
             }
@@ -494,6 +500,7 @@ namespace DNN.net.dataset.tft.favorita
             dataStatic.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_storecityid));
             dataStatic.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_storestateid));
             dataStatic.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_storetypeid));
+            dataStatic.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_storecluster));
             dataStatic.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_itemfamilyid));
             dataStatic.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_itemclassid));
             dataStatic.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_itemperishable));
@@ -528,7 +535,7 @@ namespace DNN.net.dataset.tft.favorita
 
                     int nItemID = db.AddValueItem(nSrcID, nItemIdx, strStoreItem, dtStart1, dtEnd1, nSteps);
 
-                    dataStatic.SetData(new float[] { item.ItemIndex, store.StoreIndex, store.CityID, store.StateID, store.TypeID, item.FamilyID, item.ClassID, item.Perishable });
+                    dataStatic.SetData(new float[] { item.ItemIndex, store.StoreIndex, store.CityID, store.StateID, store.TypeID, store.Cluster, item.FamilyID, item.ClassID, item.Perishable });
                     db.PutRawValue(nSrcID, nItemID, dataStatic);
 
                     int nDataIdx = 0;

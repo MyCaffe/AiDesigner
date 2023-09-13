@@ -180,7 +180,7 @@ namespace DNN.net.dataset.tft.favorita
 
                 FavoritaData data = new FavoritaData(rgFiles, log, m_evtCancel);
 
-                if (data.LoadData(dtStart, dtEnd))
+                if (data.LoadData(dtStart, dtEnd, 0))
                 {
                     FavoritaData dataTrain = data.SplitData("train", 0, dfTrainSplit, nHistCount, nFutureCount);
                     FavoritaData dataTest = data.SplitData("test", dfTrainSplit, dfTrainSplit + dfTestSplit, nHistCount, nFutureCount);
