@@ -224,7 +224,7 @@ namespace DNN.net.dataset.tft.favorita
                 }
                 else
                 {
-                    log.WriteLine("Done converting VOC0712 data files.");
+                    log.WriteLine("Done converting Favorita data files.");
                     m_iprogress.OnCompleted(new CreateProgressArgs(1, "COMPLETED."));
                 }
 
