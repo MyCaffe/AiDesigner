@@ -1,0 +1,21 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="dnn.net.dataset.tft.commodities.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="DataPath" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="TrainStartDate" Type="System.DateTime" Scope="User">
+      <Value Profile="(Default)">1990-01-01</Value>
+    </Setting>
+    <Setting Name="TrainEndDate" Type="System.DateTime" Scope="User">
+      <Value Profile="(Default)">2019-01-01</Value>
+    </Setting>
+    <Setting Name="TestStartDate" Type="System.DateTime" Scope="User">
+      <Value Profile="(Default)">2019-01-01</Value>
+    </Setting>
+    <Setting Name="TestEndDate" Type="System.DateTime" Scope="User">
+      <Value Profile="(Default)">2020-01-01</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>
