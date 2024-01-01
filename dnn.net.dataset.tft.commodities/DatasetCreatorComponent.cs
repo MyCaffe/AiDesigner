@@ -157,7 +157,7 @@ namespace dnn.net.dataset.tft.commodities
                 }
                 else
                 {
-                    log.WriteLine("Done converting PEMS Traffic data files.");
+                    log.WriteLine("Done loading and processing Commodity data files.");
                     m_iprogress.OnCompleted(new CreateProgressArgs(1, "COMPLETED."));
                 }
 
