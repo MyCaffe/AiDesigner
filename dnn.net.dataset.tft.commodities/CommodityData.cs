@@ -76,7 +76,12 @@ namespace dnn.net.dataset.tft.commodity
                     m_rgCommodityIDs.Add(strCommodity, i);
 
                 double dfLastPrice = 0;
+                CalculationArray ca = new CalculationArray(10);
                 string[] rgstrLines = File.ReadAllLines(rgstrFiles[i]);
+                List<DataRecord> rgRawRecords = new List<DataRecord>();
+                int nBadConsecutiveDataCount = 0;
+                int nMaxBadConsecutiveDataCount = 0;
+
                 for (int j = 1; j < rgstrLines.Length; j++)
                 {
                     string[] rgstr = rgstrLines[j].Split(',');
@@ -85,14 +90,53 @@ namespace dnn.net.dataset.tft.commodity
                         DateTime dt = DateTime.Parse(rgstr[0]);
                         double dfPrice = dfLastPrice;
                         double.TryParse(rgstr[1], out dfPrice);
+
+                        if (ca.IsFull)
+                        {
+                            double dfStdDev = ca.StdDev * 5;
+                            if (dfPrice > dfLastPrice + dfStdDev ||
+                                dfPrice < dfLastPrice - dfStdDev)
+                            {
+                                dfPrice = dfLastPrice;
+                                nBadConsecutiveDataCount++;
+                            }
+                            else
+                            {
+                                nMaxBadConsecutiveDataCount = Math.Max(nMaxBadConsecutiveDataCount, nBadConsecutiveDataCount);
+                                nBadConsecutiveDataCount = 0;
+                                ca.Add(dfPrice, dt, false);
+                            }
+                        }
+                        else
+                        {
+                            ca.Add(dfPrice, dt, false);
+                        }
+
                         DataRecord rec = new DataRecord(i, dt, dfPrice, strCommodity);
 
-                        m_data.Add(rec);
+                        rgRawRecords.Add(rec);
                         dfLastPrice = dfPrice;
+                    }
+
+                    if (nMaxBadConsecutiveDataCount >= 3)
+                        break;
+                }
+
+                if (nMaxBadConsecutiveDataCount < 3)
+                {
+                    foreach (DataRecord rec in rgRawRecords)
+                    {
+                        DateTime dt = rec.Date;
+
+                        m_data.Add(rec);
 
                         if (!rgDates.ContainsKey(dt))
                             rgDates.Add(dt, 0);
                     }
+                }
+                else
+                {
+                    m_log.WriteLine("Skipping '" + strCommodity + "' due to bad data.");
                 }
 
                 if (m_sw.Elapsed.TotalMilliseconds > 1000)
@@ -223,6 +267,7 @@ namespace dnn.net.dataset.tft.commodity
         bool m_bWinsorize = false;
         List<DataRecord> m_rgItems = new List<DataRecord>();
         ScalerCollection m_rgScalers = new ScalerCollection();
+        double? m_dfLastDailyVol = null;
 
         public DataRecordCollection()
         {
@@ -274,6 +319,10 @@ namespace dnn.net.dataset.tft.commodity
 
                     caVol.Add(dfDailyReturns.Value, rec.Date, false);
                     double? dfDailyVol = caVol.CalculateDailyVol(VOL_LOOKBACK);
+
+                    if (m_dfLastDailyVol.HasValue && dfDailyVol.HasValue && (double.IsInfinity(dfDailyVol.Value) || double.IsNaN(dfDailyVol.Value) || dfDailyVol.Value == 0))
+                        dfDailyVol = m_dfLastDailyVol.Value;
+
                     double? dfTargetReturns = caVol.CalculateVolScaledReturns(VOL_TARGET, dfDailyVol);
 
                     double? dfNormDailyReturns = ca.CalculateNormalizedReturns(1, dfDailyVol);
@@ -302,6 +351,9 @@ namespace dnn.net.dataset.tft.commodity
                     {
                         rec.IsValid = false;
                     }
+
+                    if (dfDailyVol.HasValue && !double.IsNaN(dfDailyVol.Value) && !double.IsInfinity(dfDailyVol.Value))
+                        m_dfLastDailyVol = dfDailyVol.Value;
                 }
                 else
                 {
@@ -736,6 +788,10 @@ namespace dnn.net.dataset.tft.commodity
 
             double dfLast = rg[rg.Count - 1];
             double dfFirst = rg[rg.Count - (nOffset + 1)];
+
+            if (dfFirst == 0)
+                return 0;
+
             return (dfLast / dfFirst) - 1.0;
         }
 
@@ -759,7 +815,11 @@ namespace dnn.net.dataset.tft.commodity
             if (m_dfLastVol.HasValue)
             {
                 double dfDailyReturns = LastVal;
-                double dfScaled = dfDailyReturns * dfVolTarget / m_dfLastVol.Value;
+                double dfScaled = dfDailyReturns * dfVolTarget;
+
+                if (m_dfLastVol.Value != 0)
+                    dfScaled /= m_dfLastVol.Value;
+
                 m_dfLastVol = dfAnnualVol;
                 return dfScaled;
             }
@@ -779,7 +839,11 @@ namespace dnn.net.dataset.tft.commodity
             if (!dfReturns.HasValue)
                 return null;
 
-            double dfNormReturns = dfReturns.Value / dfDailyVol.Value;
+            double dfNormReturns = dfReturns.Value;
+
+            if (dfDailyVol.Value != 0)
+                dfNormReturns /= dfDailyVol.Value;
+
             double dfAnnualized = dfNormReturns / Math.Sqrt(nOffset);
 
             return dfAnnualized;
