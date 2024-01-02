@@ -76,7 +76,7 @@ namespace dnn.net.dataset.tft.commodity
                     m_rgCommodityIDs.Add(strCommodity, i);
 
                 double dfLastPrice = 0;
-                CalculationArray ca = new CalculationArray(10);
+                CalculationArray ca = new CalculationArray(20);
                 string[] rgstrLines = File.ReadAllLines(rgstrFiles[i]);
                 List<DataRecord> rgRawRecords = new List<DataRecord>();
                 int nBadConsecutiveDataCount = 0;
@@ -93,9 +93,9 @@ namespace dnn.net.dataset.tft.commodity
 
                         if (ca.IsFull)
                         {
-                            double dfStdDev = ca.StdDev * 5;
-                            if (dfPrice > dfLastPrice + dfStdDev ||
-                                dfPrice < dfLastPrice - dfStdDev)
+                            double dfPctChange = (dfPrice - dfLastPrice) / dfLastPrice;
+
+                            if (Math.Abs(dfPctChange) > 0.8)
                             {
                                 dfPrice = dfLastPrice;
                                 nBadConsecutiveDataCount++;
@@ -147,6 +147,7 @@ namespace dnn.net.dataset.tft.commodity
                 }
             }
 
+            m_log.WriteLine("A total of " + rgstrFiles.Length.ToString() + " commodities were processed, static ID max = " + rgstrFiles.Length.ToString() + ".");
             m_data.PreProcess(dtStart, dtEnd, m_log, m_evtCancel, rgDates.Keys.OrderBy(p => p).ToList());
 
             return true;
@@ -264,13 +265,15 @@ namespace dnn.net.dataset.tft.commodity
 
     public class DataRecordCollection
     {
+        string m_strTicker;
         bool m_bWinsorize = false;
         List<DataRecord> m_rgItems = new List<DataRecord>();
         ScalerCollection m_rgScalers = new ScalerCollection();
         double? m_dfLastDailyVol = null;
 
-        public DataRecordCollection()
+        public DataRecordCollection(string strTicker)
         {
+            m_strTicker = strTicker;
         }
 
         public void GetDates(List<DateTime> rgDates)
@@ -294,13 +297,15 @@ namespace dnn.net.dataset.tft.commodity
             MACD macd_16_48 = new MACD(16, 48);
             MACD macd_32_96 = new MACD(32, 96);
 
-            for (int i = 0; i < m_rgItems.Count; i++)
+            for (int i = 0; i < m_rgItems.Count-1; i++)
             {
                 DataRecord rec = m_rgItems[i];
+                DataRecord rec1 = m_rgItems[i + 1];
 
                 if (ca.Add(rec.Srs, rec.Date, false))
                 {
                     double dfSrs = rec.Srs;
+                    double dfSrs1 = rec1.Srs;
 
                     if (m_bWinsorize)
                     {
@@ -323,7 +328,7 @@ namespace dnn.net.dataset.tft.commodity
                     if (m_dfLastDailyVol.HasValue && dfDailyVol.HasValue && (double.IsInfinity(dfDailyVol.Value) || double.IsNaN(dfDailyVol.Value) || dfDailyVol.Value == 0))
                         dfDailyVol = m_dfLastDailyVol.Value;
 
-                    double? dfTargetReturns = caVol.CalculateVolScaledReturns(VOL_TARGET, dfDailyVol);
+                    double? dfTargetReturns = (dfSrs1 - dfSrs) / dfSrs;
 
                     double? dfNormDailyReturns = ca.CalculateNormalizedReturns(1, dfDailyVol);
                     double? dfNormMonthlyReturns = ca.CalculateNormalizedReturns(21, dfDailyVol);
@@ -545,6 +550,11 @@ namespace dnn.net.dataset.tft.commodity
             return m_rgScalerTypes[(int)field];
         }
 
+        public string Symbol
+        {
+            get { return m_strCommodity; }
+        }
+
         public bool IsValid
         {
             get { return m_bValid; }
@@ -704,7 +714,7 @@ namespace dnn.net.dataset.tft.commodity
 
             if (!m_rgRecordsByCommodity.ContainsKey(rec.CommodityID))
             {
-                m_rgRecordsByCommodity.Add(rec.CommodityID, new DataRecordCollection());
+                m_rgRecordsByCommodity.Add(rec.CommodityID, new DataRecordCollection(rec.Symbol));
             }
 
             m_rgRecordsByCommodity[rec.CommodityID].Add(rec, false);
@@ -718,7 +728,7 @@ namespace dnn.net.dataset.tft.commodity
 
             if (!m_rgRecordsByCommodity.ContainsKey(rec.CommodityID))
             {
-                m_rgRecordsByCommodity.Add(rec.CommodityID, new DataRecordCollection());
+                m_rgRecordsByCommodity.Add(rec.CommodityID, new DataRecordCollection(rec.Symbol));
 
                 if (dt == null)
                     m_rgRecordsByCommodity[rec.CommodityID].SetScalers(m_nDataWindow);
@@ -802,7 +812,7 @@ namespace dnn.net.dataset.tft.commodity
             if (rg.Count < nOffset)
                 return null;
 
-            return CalculateStdDev(rg, nOffset);
+            return CalculateStdDev(rg, nOffset, bEwm);
         }
 
         public double? CalculateVolScaledReturns(double dfVolTarget, double? dfDailyVol, bool bEwm = true)
