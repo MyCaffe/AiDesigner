@@ -19,6 +19,9 @@ namespace DNN.net.dataset.common
         {
             InitializeComponent();
             m_strSelectedFolder = strFolder;
+
+            if (string.IsNullOrEmpty(m_strSelectedFolder))
+                m_strSelectedFolder = Properties.Settings.Default.LastFolder;
         }
 
         public string SelectedFolder
@@ -57,6 +60,8 @@ namespace DNN.net.dataset.common
         private void btnOK_Click(object sender, EventArgs e)
         {
             m_strSelectedFolder = edtFolder.Text;
+            Properties.Settings.Default.LastFolder = edtFolder.Text;
+            Properties.Settings.Default.Save();
         }
     }
 }
