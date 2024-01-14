@@ -91,11 +91,14 @@ namespace dnn.net.dataset.tft.commodity
                         double dfPrice = dfLastPrice;
                         double.TryParse(rgstr[1], out dfPrice);
 
+                        if (!rgDates.ContainsKey(dt))
+                            rgDates.Add(dt, 0);
+
                         if (ca.IsFull)
                         {
                             double dfPctChange = (dfPrice - dfLastPrice) / dfLastPrice;
 
-                            if (Math.Abs(dfPctChange) > 0.8)
+                            if (dfPrice == 0 || Math.Abs(dfPctChange) > 10)
                             {
                                 dfPrice = dfLastPrice;
                                 nBadConsecutiveDataCount++;
@@ -129,9 +132,6 @@ namespace dnn.net.dataset.tft.commodity
                         DateTime dt = rec.Date;
 
                         m_data.Add(rec);
-
-                        if (!rgDates.ContainsKey(dt))
-                            rgDates.Add(dt, 0);
                     }
                 }
                 else
@@ -149,6 +149,8 @@ namespace dnn.net.dataset.tft.commodity
 
             m_log.WriteLine("A total of " + rgstrFiles.Length.ToString() + " commodities were processed, static ID max = " + rgstrFiles.Length.ToString() + ".");
             m_data.PreProcess(dtStart, dtEnd, m_log, m_evtCancel, rgDates.Keys.OrderBy(p => p).ToList());
+
+            m_log.WriteLine(m_data.RecordsByCommodity.Count.ToString() + " valid commodities were loaded.");
 
             return true;
         }
@@ -229,6 +231,15 @@ namespace dnn.net.dataset.tft.commodity
                     rgfData.Add((float)rec.NormalizedItem(DataRecord.FIELD.MACD2));
                     rgfData.Add((float)rec.NormalizedItem(DataRecord.FIELD.MACD3));
 
+                    for (int i=0; i<rgfData.Count; i++)
+                    {
+                        if (float.IsNaN(rgfData[i]) || float.IsInfinity(rgfData[i]))
+                        {
+                            m_log.WriteLine("WARNING: NaN or Infinity found in data, setting to 0.");
+                            rgfData[i] = 0;
+                        }
+                    }
+
                     data.SetData(dt, rgfData.ToArray());
                     db.PutRawValue(nSrcID, nItemID, data);
 
@@ -276,6 +287,11 @@ namespace dnn.net.dataset.tft.commodity
             m_strTicker = strTicker;
         }
 
+        public string Symbol
+        {
+            get { return m_strTicker; }
+        }
+
         public void GetDates(List<DateTime> rgDates)
         {
             foreach (DataRecord rec in m_rgItems)
@@ -283,7 +299,33 @@ namespace dnn.net.dataset.tft.commodity
                 if (!rgDates.Contains(rec.Date))
                     rgDates.Add(rec.Date);
             }
-        }   
+        }
+
+        public int GetMissingConsecutiveDates(DateTime dtStart, DateTime dtEnd, List<DateTime> rgDates, List<DateTime> rgMissingDates)
+        {
+            List<DateTime> rgDateLocal = m_rgItems.Select(p => p.Date).OrderBy(p => p).ToList();
+            int nMaxConsecutive = 0;
+            int nConsecutive = 0;
+
+            for (int i=0; i<rgDates.Count; i++)
+            {
+                if (rgDates[i] < dtStart || rgDates[i] > dtEnd)
+                    continue;
+
+                if (!rgDateLocal.Contains(rgDates[i]))
+                {
+                    nConsecutive++;
+                    nMaxConsecutive = Math.Max(nMaxConsecutive, nConsecutive);
+                    rgMissingDates.Add(rgDates[i]);
+                }
+                else
+                {
+                    nConsecutive = 0;
+                }
+            }
+
+            return nMaxConsecutive;
+        }
 
         public void PreProcess()
         {
@@ -329,6 +371,9 @@ namespace dnn.net.dataset.tft.commodity
                         dfDailyVol = m_dfLastDailyVol.Value;
 
                     double? dfTargetReturns = (dfSrs1 - dfSrs) / dfSrs;
+
+                    if (double.IsNaN(dfTargetReturns.Value) || double.IsInfinity(dfTargetReturns.Value))
+                        Trace.WriteLine("here.");
 
                     double? dfNormDailyReturns = ca.CalculateNormalizedReturns(1, dfDailyVol);
                     double? dfNormMonthlyReturns = ca.CalculateNormalizedReturns(21, dfDailyVol);
@@ -612,6 +657,8 @@ namespace dnn.net.dataset.tft.commodity
             sb.Append(m_dt.ToString());
             sb.Append(' ');
             sb.Append(IsValid ? "VALID" : "INVALID");
+            sb.Append(' ');
+            sb.Append(m_dfSrs.ToString("N2"));
 
             return sb.ToString();
         }
@@ -649,6 +696,11 @@ namespace dnn.net.dataset.tft.commodity
                     rgDelete.Add(kv.Key);
                     continue;
                 }
+
+                List<DateTime> rgMissingDates = new List<DateTime>();
+                int nMissingCount = kv.Value.GetMissingConsecutiveDates(dtStart, dtEnd, rgDateSync, rgMissingDates);
+                if (nMissingCount > 5)
+                    rgDelete.Add(kv.Key);
             }
 
             foreach (int nKey in rgDelete)
@@ -894,7 +946,12 @@ namespace dnn.net.dataset.tft.commodity
             if (!m_caAnnual.Add(dfQ, dt, false))
                 return null;
 
-            return dfQ / m_caAnnual.StdDev;            
+            double dfMacdFinal = dfQ / m_caAnnual.StdDev;
+
+            if (double.IsNaN(dfMacdFinal) || double.IsInfinity(dfMacdFinal))
+                Trace.WriteLine("here.");
+
+            return dfMacdFinal;
         }
     }
 }
