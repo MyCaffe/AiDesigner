@@ -90,6 +90,7 @@ namespace dnn.net.dataset.tft.commodities
             DateTime dtTestStart = Properties.Settings.Default.TestStartDate;
             DateTime dtTestEnd = Properties.Settings.Default.TestEndDate;
             string strDataPath = Properties.Settings.Default.DataPath;
+            string strDatasetName = Name;
 
             m_evtCancel.Reset();
             m_iprogress = progress;
@@ -102,6 +103,10 @@ namespace dnn.net.dataset.tft.commodities
                 DataConfigSetting dataPath = config.Settings.Find("Data Path");
                 if (dataPath != null)
                     strDataPath = dataPath.Value.ToString();
+
+                DataConfigSetting datasetName = config.Settings.Find("Output Dataset Name");
+                if (datasetName != null)
+                    strDatasetName = datasetName.Value.ToString();
 
                 DataConfigSetting trainStart = config.Settings.Find("Train Start Date");
                 if (trainStart != null)
@@ -137,11 +142,11 @@ namespace dnn.net.dataset.tft.commodities
                     CommodityData dataTest = data1.Item2;
 
                     DatabaseTemporal db = new DatabaseTemporal();
-                    db.DeleteDataset(Name, false, log, m_evtCancel);
-                    int nTrainSrcID = dataTrain.SaveAsSql(Name, "train");
-                    int nTestSrcID = dataTest.SaveAsSql(Name, "test");
-                    //dataVal.SaveAsSql(Name, "validation");
-                    db.AddDataset(config.ID, Name, nTestSrcID, nTrainSrcID, 0, 0, null, false);
+                    db.DeleteDataset(strDatasetName, false, log, m_evtCancel);
+                    int nTrainSrcID = dataTrain.SaveAsSql(strDatasetName, "train");
+                    int nTestSrcID = dataTest.SaveAsSql(strDatasetName, "test");
+                    //dataVal.SaveAsSql(strDatasetName, "validation");
+                    db.AddDataset(config.ID, strDatasetName, nTestSrcID, nTrainSrcID, 0, 0, null, false);
                 }
             }
             catch (Exception excpt)
@@ -152,7 +157,7 @@ namespace dnn.net.dataset.tft.commodities
             {
                 if (m_evtCancel.WaitOne(0))
                 {
-                    log.WriteLine("ABORTED converting " + Name + " data files.");
+                    log.WriteLine("ABORTED converting " + strDatasetName + " data files.");
                     m_iprogress.OnCompleted(new CreateProgressArgs(1, "ABORTED!", null, true));
                 }
                 else
