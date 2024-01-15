@@ -55,11 +55,13 @@
     <Reference Include="MyCaffe.db.temporal">
       <HintPath>..\_references\MyCaffe.db.temporal.dll</HintPath>
     </Reference>
-    <Reference Include="SimpleGraphing">
-      <HintPath>..\_references\SimpleGraphing.dll</HintPath>
+    <Reference Include="SimpleGraphing, Version=1.12.3.9, Culture=neutral, PublicKeyToken=db1fd361618e40f6, processorArchitecture=MSIL">
+      <HintPath>..\packages\SimpleGraphingControl.1.12.3.9\lib\net40\SimpleGraphing.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -85,6 +87,7 @@
   <ItemGroup>
     <None Include="app.config" />
     <None Include="dnn.net.dataset.tft.commodities.pfx" />
+    <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>

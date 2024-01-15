@@ -15,35 +15,52 @@ using System.Security.Permissions;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
+using System.Drawing;
 
 namespace dnn.net.dataset.tft.commodity
 {
     public class CommodityData
     {
         string m_strDataPath;
+        string m_strDebugPath;
+        bool m_bEnableDebugOutputTraining;
+        bool m_bEnableDebugOutputTesting;
         DataTable m_data = new DataTable();
         Dictionary<int, string> m_rgCommodities = new Dictionary<int, string>();
         Dictionary<string, int> m_rgCommodityIDs = new Dictionary<string, int>();
         Log m_log;
         CancelEvent m_evtCancel;
         Stopwatch m_sw = new Stopwatch();
+        DATASET_TYPE m_type = DATASET_TYPE.NONE;
 
+        public enum DATASET_TYPE
+        {
+            NONE,
+            TRAIN,
+            TEST
+        }
 
-        public CommodityData(string strDataPath, Log log, CancelEvent evtCancel)
+        public CommodityData(string strDataPath, Log log, CancelEvent evtCancel, string strDebugPath, bool bEnableDebugOutputTraining, bool bEnableDebugOutputTesting)
         {
             m_strDataPath = strDataPath;
             m_log = log;
             m_evtCancel = evtCancel;
+
+            m_strDebugPath = strDebugPath;
+            m_bEnableDebugOutputTesting = bEnableDebugOutputTesting;
+            m_bEnableDebugOutputTraining = bEnableDebugOutputTraining;
         }
 
         public Tuple<CommodityData, CommodityData> SplitData(DateTime dtTrainingStart, DateTime dtTrainingEnd, DateTime dtTestingStart, DateTime dtTestingEnd)
         {
-            CommodityData dataTrain = new CommodityData(null, m_log, m_evtCancel);
+            CommodityData dataTrain = new CommodityData(null, m_log, m_evtCancel, m_strDebugPath, m_bEnableDebugOutputTraining, false);
+            dataTrain.m_type = DATASET_TYPE.TRAIN;
             dataTrain.m_rgCommodities = m_rgCommodities;
             dataTrain.m_rgCommodityIDs = m_rgCommodityIDs;
             dataTrain.m_data = m_data.Split(dtTrainingStart, dtTrainingEnd, null);
 
-            CommodityData dataTest = new CommodityData(null, m_log, m_evtCancel);
+            CommodityData dataTest = new CommodityData(null, m_log, m_evtCancel, m_strDebugPath, false, m_bEnableDebugOutputTesting);
+            dataTest.m_type = DATASET_TYPE.TEST;
             dataTest.m_rgCommodities = m_rgCommodities;
             dataTest.m_rgCommodityIDs = m_rgCommodityIDs;
             dataTest.m_data = m_data.Split(dtTestingStart, dtTestingEnd, dataTrain.m_data);
@@ -153,6 +170,39 @@ namespace dnn.net.dataset.tft.commodity
             m_log.WriteLine(m_data.RecordsByCommodity.Count.ToString() + " valid commodities were loaded.");
 
             return true;
+        }
+
+        public void DebugOutput(string strTag)
+        {
+            if (string.IsNullOrEmpty(m_strDebugPath))
+                return;
+
+            if (m_type == DATASET_TYPE.TRAIN && !m_bEnableDebugOutputTraining)
+                return;
+
+            if (m_type == DATASET_TYPE.TEST && !m_bEnableDebugOutputTesting)
+                return;
+
+            string strPath = m_strDebugPath.TrimEnd('\\') + "\\" + strTag;
+            if (!Directory.Exists(strPath))
+                Directory.CreateDirectory(strPath);
+
+            foreach (KeyValuePair<int, DataRecordCollection> kv in m_data.RecordsByCommodity)
+            {
+                debug(strPath, kv.Value, "raw", strTag, false);
+                debug(strPath, kv.Value, "norm", strTag, true);
+            }
+        }
+
+        private void debug(string strPath, DataRecordCollection col, string strOrder, string strTag, bool bNormalized)
+        {
+            Tuple<string, Image>[] rgImg = col.Render(bNormalized, DataRecord.FIELD.TARGET_RETURNS, DataRecord.FIELD.NORM_DAILY_RETURNS, DataRecord.FIELD.NORM_MONTHLY_RETURNS, DataRecord.FIELD.NORM_QUARTERLY_RETURNS, DataRecord.FIELD.NORM_BIANNUAL_RETURNS, DataRecord.FIELD.NORM_ANNUAL_RETURNS, DataRecord.FIELD.MACD1, DataRecord.FIELD.MACD2, DataRecord.FIELD.MACD3);
+
+            foreach (Tuple<string, Image> img in rgImg)
+            {
+                string strFile = Path.Combine(strPath, col.Symbol + "." + strOrder + "." + img.Item1 + "." + strTag + ".png");
+                img.Item2.Save(strFile);
+            }
         }
 
         public int SaveAsSql(string strName, string strSub)
@@ -358,11 +408,10 @@ namespace dnn.net.dataset.tft.commodity
                         double dfMinSrs = dfEwm - VOL_THRESHOLD * dfEwmStd;
                         dfSrs = Math.Min(dfSrs, dfMaxSrs);
                         dfSrs = Math.Max(dfSrs, dfMinSrs);
+                        ca.ReplaceLast(dfSrs);
                     }
 
-                    ca.Add(dfSrs, rec.Date, false);
-
-                    double? dfDailyReturns = ca.CalculateReturns(1);
+                    double? dfDailyReturns = ca.CalculateReturns(1, false);
 
                     caVol.Add(dfDailyReturns.Value, rec.Date, false);
                     double? dfDailyVol = caVol.CalculateDailyVol(VOL_LOOKBACK);
@@ -514,6 +563,37 @@ namespace dnn.net.dataset.tft.commodity
         public List<DataRecord> Items
         {
             get { return m_rgItems; }
+        }
+
+        public Tuple<string, Image>[] Render(bool bNormalized, params DataRecord.FIELD[] rgField)
+        {
+            List<Tuple<string, Image>> rgImg = new List<Tuple<string, Image>>();
+
+            for (int j = 0; j < rgField.Count(); j++)
+            {
+                DataRecord.FIELD field = rgField[j];
+                PlotCollection plots = new PlotCollection(field.ToString());
+
+                for (int i = 0; i < m_rgItems.Count; i++)
+                {
+                    DataRecord rec = m_rgItems[i];
+
+                    double dfVal = (bNormalized) ? rec.NormalizedItem(field) : rec.Item(field);
+                    bool bActive = rec.IsValid;
+
+                    if (double.IsNaN(dfVal) || double.IsInfinity(dfVal))
+                        bActive = false;
+
+                    Plot plot = new Plot(rec.Date.ToFileTime(), dfVal, null, bActive);
+                    plot.Tag = rec.Date;
+                    plots.Add(plot);
+                }
+
+                Image img = SimpleGraphingControl.QuickRender(plots, 2000, 600, false, ConfigurationAxis.VALUE_RESOLUTION.DAY_MONTH, null, true, null, true);
+                rgImg.Add(new Tuple<string, Image>(field.ToString(), img));
+            }
+
+            return rgImg.ToArray();
         }
     }
 

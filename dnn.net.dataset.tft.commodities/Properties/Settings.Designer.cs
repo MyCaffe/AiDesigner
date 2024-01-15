@@ -82,5 +82,41 @@ namespace dnn.net.dataset.tft.commodities.Properties {
                 this["TestEndDate"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string DebugFolder {
+            get {
+                return ((string)(this["DebugFolder"]));
+            }
+            set {
+                this["DebugFolder"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool EnableDebugOutputTraining {
+            get {
+                return ((bool)(this["EnableDebugOutputTraining"]));
+            }
+            set {
+                this["EnableDebugOutputTraining"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool EnableDebugOutputTesting {
+            get {
+                return ((bool)(this["EnableDebugOutputTesting"]));
+            }
+            set {
+                this["EnableDebugOutputTesting"] = value;
+            }
+        }
     }
 }

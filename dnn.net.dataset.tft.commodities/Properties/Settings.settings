@@ -17,5 +17,14 @@
     <Setting Name="TestEndDate" Type="System.DateTime" Scope="User">
       <Value Profile="(Default)">2020-01-01</Value>
     </Setting>
+    <Setting Name="DebugFolder" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="EnableDebugOutputTraining" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="EnableDebugOutputTesting" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

@@ -72,15 +72,20 @@ namespace dnn.net.dataset.tft.commodities
         public void QueryConfiguration(DatasetConfiguration config)
         {
             string strDataPath = Properties.Settings.Default.DataPath;
+            string strDebugFolder = Properties.Settings.Default.DebugFolder;
 
             config.Settings.Add(new DataConfigSetting("Output Dataset Name", Name));
             config.Settings.Add(new DataConfigSetting("Data Path", strDataPath, DataConfigSetting.TYPE.DIRECTORY));
+            config.Settings.Add(new DataConfigSetting("Debug Path", strDebugFolder, DataConfigSetting.TYPE.DIRECTORY));
 
             config.Settings.Add(new DataConfigSetting("Train Start Date", Properties.Settings.Default.TrainStartDate, DataConfigSetting.TYPE.DATETIME));
             config.Settings.Add(new DataConfigSetting("Train End Date", Properties.Settings.Default.TrainEndDate, DataConfigSetting.TYPE.DATETIME));
             config.Settings.Add(new DataConfigSetting("Test Start Date", Properties.Settings.Default.TestStartDate, DataConfigSetting.TYPE.DATETIME));
             config.Settings.Add(new DataConfigSetting("Test End Date", Properties.Settings.Default.TestEndDate, DataConfigSetting.TYPE.DATETIME));
             addList(config, "Output Format", OUTPUT_TYPE.SQL, OUTPUT_TYPE.SQL);
+
+            addList(config, "Enable Debug Output Training", (Properties.Settings.Default.EnableDebugOutputTraining) ? BOOLEAN.True : BOOLEAN.False, BOOLEAN.False, BOOLEAN.True);
+            addList(config, "Enable Debug Output Testing", (Properties.Settings.Default.EnableDebugOutputTesting) ? BOOLEAN.True : BOOLEAN.False, BOOLEAN.False, BOOLEAN.True);
         }
 
         public void Create(DatasetConfiguration config, IXDatasetCreatorProgress progress)
@@ -90,6 +95,9 @@ namespace dnn.net.dataset.tft.commodities
             DateTime dtTestStart = Properties.Settings.Default.TestStartDate;
             DateTime dtTestEnd = Properties.Settings.Default.TestEndDate;
             string strDataPath = Properties.Settings.Default.DataPath;
+            string strDebugPath = Properties.Settings.Default.DebugFolder;
+            bool bEnableDebugOutputTraining = Properties.Settings.Default.EnableDebugOutputTraining;
+            bool bEnableDebugOutputTesting = Properties.Settings.Default.EnableDebugOutputTesting;
             string strDatasetName = Name;
 
             m_evtCancel.Reset();
@@ -100,9 +108,14 @@ namespace dnn.net.dataset.tft.commodities
 
             try
             {
+                OptionItem item;
                 DataConfigSetting dataPath = config.Settings.Find("Data Path");
                 if (dataPath != null)
                     strDataPath = dataPath.Value.ToString();
+
+                DataConfigSetting debugPath = config.Settings.Find("Debug Path");
+                if (debugPath != null)
+                    strDebugPath = debugPath.Value.ToString();
 
                 DataConfigSetting datasetName = config.Settings.Find("Output Dataset Name");
                 if (datasetName != null)
@@ -124,17 +137,34 @@ namespace dnn.net.dataset.tft.commodities
                 if (testEnd != null)
                     dtTestEnd = DateTime.Parse(testEnd.Value.ToString());
 
+                DataConfigSetting enableDebugTrain = config.Settings.Find("Enable Debug Output Training");
+                if (enableDebugTrain != null)
+                {
+                    item = enableDebugTrain.Value as OptionItem;
+                    bEnableDebugOutputTraining = item.Index == 1 ? true : false;
+                }
+
+                DataConfigSetting enableDebugTest = config.Settings.Find("Enable Debug Output Testing");
+                if (enableDebugTest != null)
+                {
+                    item = enableDebugTest.Value as OptionItem;
+                    bEnableDebugOutputTesting = item.Index == 1 ? true : false;
+                }
+
                 Properties.Settings.Default.DataPath = strDataPath;
+                Properties.Settings.Default.DebugFolder = strDebugPath;
                 Properties.Settings.Default.TrainStartDate = dtTrainStart;
                 Properties.Settings.Default.TrainEndDate = dtTrainEnd;
                 Properties.Settings.Default.TestStartDate = dtTestStart;
                 Properties.Settings.Default.TestEndDate = dtTestEnd;
+                Properties.Settings.Default.EnableDebugOutputTraining = bEnableDebugOutputTraining;
+                Properties.Settings.Default.EnableDebugOutputTesting = bEnableDebugOutputTesting;
                 Properties.Settings.Default.Save();
 
                 if (!Directory.Exists(strDataPath))
                     throw new Exception("Could not find the data path '" + strDataPath + "'.");
 
-                CommodityData data = new CommodityData(strDataPath, log, m_evtCancel);
+                CommodityData data = new CommodityData(strDataPath, log, m_evtCancel, strDebugPath, bEnableDebugOutputTraining, bEnableDebugOutputTesting);
                 if (data.LoadData(dtTestStart - TimeSpan.FromDays(365 * 3), dtTestEnd))
                 {
                     Tuple<CommodityData, CommodityData> data1 = data.SplitData(dtTrainStart, dtTrainEnd, dtTestStart, dtTestEnd);
@@ -143,6 +173,10 @@ namespace dnn.net.dataset.tft.commodities
 
                     DatabaseTemporal db = new DatabaseTemporal();
                     db.DeleteDataset(strDatasetName, false, log, m_evtCancel);
+
+                    dataTrain.DebugOutput("train");
+                    dataTest.DebugOutput("test");
+
                     int nTrainSrcID = dataTrain.SaveAsSql(strDatasetName, "train");
                     int nTestSrcID = dataTest.SaveAsSql(strDatasetName, "test");
                     //dataVal.SaveAsSql(strDatasetName, "validation");
@@ -167,10 +201,13 @@ namespace dnn.net.dataset.tft.commodities
                 }
 
                 Properties.Settings.Default.DataPath = strDataPath;
+                Properties.Settings.Default.DebugFolder = strDebugPath;
                 Properties.Settings.Default.TrainStartDate = dtTrainStart;
                 Properties.Settings.Default.TrainEndDate = dtTrainEnd;
                 Properties.Settings.Default.TestStartDate = dtTestStart;
                 Properties.Settings.Default.TestEndDate = dtTestEnd;
+                Properties.Settings.Default.EnableDebugOutputTraining = bEnableDebugOutputTraining;
+                Properties.Settings.Default.EnableDebugOutputTesting = bEnableDebugOutputTesting;
                 Properties.Settings.Default.Save();
             }
         }
