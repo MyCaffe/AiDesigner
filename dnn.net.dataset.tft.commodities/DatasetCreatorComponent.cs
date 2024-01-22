@@ -83,9 +83,11 @@ namespace dnn.net.dataset.tft.commodities
             config.Settings.Add(new DataConfigSetting("Test Start Date", Properties.Settings.Default.TestStartDate, DataConfigSetting.TYPE.DATETIME));
             config.Settings.Add(new DataConfigSetting("Test End Date", Properties.Settings.Default.TestEndDate, DataConfigSetting.TYPE.DATETIME));
             addList(config, "Output Format", OUTPUT_TYPE.SQL, OUTPUT_TYPE.SQL);
+            addList(config, "Loss Type", (DataRecord.LOSS_TYPE)Properties.Settings.Default.LossType, DataRecord.LOSS_TYPE.SHARPE, DataRecord.LOSS_TYPE.QUANTILE);
 
             addList(config, "Enable Debug Output Training", (Properties.Settings.Default.EnableDebugOutputTraining) ? BOOLEAN.True : BOOLEAN.False, BOOLEAN.False, BOOLEAN.True);
             addList(config, "Enable Debug Output Testing", (Properties.Settings.Default.EnableDebugOutputTesting) ? BOOLEAN.True : BOOLEAN.False, BOOLEAN.False, BOOLEAN.True);
+            addList(config, "Enable Extended Data", (Properties.Settings.Default.EnableExtendedData) ? BOOLEAN.True : BOOLEAN.False, BOOLEAN.False, BOOLEAN.True);
         }
 
         public void Create(DatasetConfiguration config, IXDatasetCreatorProgress progress)
@@ -98,6 +100,8 @@ namespace dnn.net.dataset.tft.commodities
             string strDebugPath = Properties.Settings.Default.DebugFolder;
             bool bEnableDebugOutputTraining = Properties.Settings.Default.EnableDebugOutputTraining;
             bool bEnableDebugOutputTesting = Properties.Settings.Default.EnableDebugOutputTesting;
+            bool bEnableExtendedData = Properties.Settings.Default.EnableExtendedData;
+            DataRecord.LOSS_TYPE lossType = (DataRecord.LOSS_TYPE)Properties.Settings.Default.LossType;
             string strDatasetName = Name;
 
             m_evtCancel.Reset();
@@ -137,6 +141,13 @@ namespace dnn.net.dataset.tft.commodities
                 if (testEnd != null)
                     dtTestEnd = DateTime.Parse(testEnd.Value.ToString());
 
+                DataConfigSetting lossType1 = config.Settings.Find("Loss Type");
+                if (lossType1 != null)
+                {
+                    item = lossType1.Value as OptionItem;
+                    lossType = (DataRecord.LOSS_TYPE)item.Index;
+                }
+
                 DataConfigSetting enableDebugTrain = config.Settings.Find("Enable Debug Output Training");
                 if (enableDebugTrain != null)
                 {
@@ -151,6 +162,13 @@ namespace dnn.net.dataset.tft.commodities
                     bEnableDebugOutputTesting = item.Index == 1 ? true : false;
                 }
 
+                DataConfigSetting enableExtendedData = config.Settings.Find("Enable Extended Data");
+                if (enableExtendedData != null)
+                {
+                    item = enableExtendedData.Value as OptionItem;
+                    bEnableExtendedData = item.Index == 1 ? true : false;
+                }
+
                 Properties.Settings.Default.DataPath = strDataPath;
                 Properties.Settings.Default.DebugFolder = strDebugPath;
                 Properties.Settings.Default.TrainStartDate = dtTrainStart;
@@ -159,13 +177,15 @@ namespace dnn.net.dataset.tft.commodities
                 Properties.Settings.Default.TestEndDate = dtTestEnd;
                 Properties.Settings.Default.EnableDebugOutputTraining = bEnableDebugOutputTraining;
                 Properties.Settings.Default.EnableDebugOutputTesting = bEnableDebugOutputTesting;
+                Properties.Settings.Default.LossType = (int)lossType;
+                Properties.Settings.Default.EnableExtendedData = bEnableExtendedData;
                 Properties.Settings.Default.Save();
 
                 if (!Directory.Exists(strDataPath))
                     throw new Exception("Could not find the data path '" + strDataPath + "'.");
 
-                CommodityData data = new CommodityData(strDataPath, log, m_evtCancel, strDebugPath, bEnableDebugOutputTraining, bEnableDebugOutputTesting);
-                if (data.LoadData(dtTestStart - TimeSpan.FromDays(365 * 3), dtTestEnd))
+                CommodityData data = new CommodityData(strDataPath, log, m_evtCancel, strDebugPath, bEnableDebugOutputTraining, bEnableDebugOutputTesting, bEnableExtendedData, lossType);
+                if (data.LoadData(dtTrainEnd - TimeSpan.FromDays(365), dtTestEnd))
                 {
                     Tuple<CommodityData, CommodityData> data1 = data.SplitData(dtTrainStart, dtTrainEnd, dtTestStart, dtTestEnd);
                     CommodityData dataTrain = data1.Item1;
@@ -208,6 +228,7 @@ namespace dnn.net.dataset.tft.commodities
                 Properties.Settings.Default.TestEndDate = dtTestEnd;
                 Properties.Settings.Default.EnableDebugOutputTraining = bEnableDebugOutputTraining;
                 Properties.Settings.Default.EnableDebugOutputTesting = bEnableDebugOutputTesting;
+                Properties.Settings.Default.EnableExtendedData = bEnableExtendedData;
                 Properties.Settings.Default.Save();
             }
         }

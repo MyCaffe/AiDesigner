@@ -118,5 +118,29 @@ namespace dnn.net.dataset.tft.commodities.Properties {
                 this["EnableDebugOutputTesting"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int LossType {
+            get {
+                return ((int)(this["LossType"]));
+            }
+            set {
+                this["LossType"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool EnableExtendedData {
+            get {
+                return ((bool)(this["EnableExtendedData"]));
+            }
+            set {
+                this["EnableExtendedData"] = value;
+            }
+        }
     }
 }

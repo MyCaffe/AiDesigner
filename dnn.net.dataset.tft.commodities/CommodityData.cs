@@ -16,6 +16,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Drawing;
+using SimpleGraphing.GraphData;
 
 namespace dnn.net.dataset.tft.commodity
 {
@@ -25,6 +26,7 @@ namespace dnn.net.dataset.tft.commodity
         string m_strDebugPath;
         bool m_bEnableDebugOutputTraining;
         bool m_bEnableDebugOutputTesting;
+        bool m_bEnableExtendedData;
         DataTable m_data = new DataTable();
         Dictionary<int, string> m_rgCommodities = new Dictionary<int, string>();
         Dictionary<string, int> m_rgCommodityIDs = new Dictionary<string, int>();
@@ -32,6 +34,7 @@ namespace dnn.net.dataset.tft.commodity
         CancelEvent m_evtCancel;
         Stopwatch m_sw = new Stopwatch();
         DATASET_TYPE m_type = DATASET_TYPE.NONE;
+        DataRecord.LOSS_TYPE m_lossType = DataRecord.LOSS_TYPE.SHARPE;
 
         public enum DATASET_TYPE
         {
@@ -40,26 +43,28 @@ namespace dnn.net.dataset.tft.commodity
             TEST
         }
 
-        public CommodityData(string strDataPath, Log log, CancelEvent evtCancel, string strDebugPath, bool bEnableDebugOutputTraining, bool bEnableDebugOutputTesting)
+        public CommodityData(string strDataPath, Log log, CancelEvent evtCancel, string strDebugPath, bool bEnableDebugOutputTraining, bool bEnableDebugOutputTesting, bool bEnableExtendedData, DataRecord.LOSS_TYPE lossType)
         {
             m_strDataPath = strDataPath;
             m_log = log;
             m_evtCancel = evtCancel;
+            m_lossType = lossType;
 
             m_strDebugPath = strDebugPath;
             m_bEnableDebugOutputTesting = bEnableDebugOutputTesting;
             m_bEnableDebugOutputTraining = bEnableDebugOutputTraining;
+            m_bEnableExtendedData = bEnableExtendedData;
         }
 
         public Tuple<CommodityData, CommodityData> SplitData(DateTime dtTrainingStart, DateTime dtTrainingEnd, DateTime dtTestingStart, DateTime dtTestingEnd)
         {
-            CommodityData dataTrain = new CommodityData(null, m_log, m_evtCancel, m_strDebugPath, m_bEnableDebugOutputTraining, false);
+            CommodityData dataTrain = new CommodityData(null, m_log, m_evtCancel, m_strDebugPath, m_bEnableDebugOutputTraining, false, m_bEnableExtendedData, m_lossType);
             dataTrain.m_type = DATASET_TYPE.TRAIN;
             dataTrain.m_rgCommodities = m_rgCommodities;
             dataTrain.m_rgCommodityIDs = m_rgCommodityIDs;
             dataTrain.m_data = m_data.Split(dtTrainingStart, dtTrainingEnd, null);
 
-            CommodityData dataTest = new CommodityData(null, m_log, m_evtCancel, m_strDebugPath, false, m_bEnableDebugOutputTesting);
+            CommodityData dataTest = new CommodityData(null, m_log, m_evtCancel, m_strDebugPath, false, m_bEnableDebugOutputTesting, m_bEnableExtendedData, m_lossType);
             dataTest.m_type = DATASET_TYPE.TEST;
             dataTest.m_rgCommodities = m_rgCommodities;
             dataTest.m_rgCommodityIDs = m_rgCommodityIDs;
@@ -132,7 +137,7 @@ namespace dnn.net.dataset.tft.commodity
                             ca.Add(dfPrice, dt, false);
                         }
 
-                        DataRecord rec = new DataRecord(i, dt, dfPrice, strCommodity);
+                        DataRecord rec = new DataRecord(i, dt, dfPrice, strCommodity, m_bEnableExtendedData, m_lossType);
 
                         rgRawRecords.Add(rec);
                         dfLastPrice = dfPrice;
@@ -213,7 +218,12 @@ namespace dnn.net.dataset.tft.commodity
 
             int nIdx = 0;
             int nTotal = m_data.RecordsByCommodity.Sum(p => p.Value.Items.Count);
-            int nSrcID = db.AddSource(strName + "." + strSub, m_rgCommodities.Count, 8, m_data.RecordsPerCommodity, true, 0, false);
+            int nWid = (m_bEnableExtendedData) ? 14 : 8;
+
+            if (m_lossType == DataRecord.LOSS_TYPE.QUANTILE)
+                nWid += 3;
+
+            int nSrcID = db.AddSource(strName + "." + strSub, m_rgCommodities.Count, nWid, m_data.RecordsPerCommodity, true, 0, false);
             int nItemCount = 0;
             int nTotalSteps = m_data.RecordsByCommodity.Max(p => p.Value.Items.Count);
 
@@ -230,7 +240,17 @@ namespace dnn.net.dataset.tft.commodity
             int nStreamID_macd1 = db.AddValueStream(nSrcID, "macd_8_24", nOrdering++, MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, null, null, null, 1, null);
             int nStreamID_macd2 = db.AddValueStream(nSrcID, "macd_16_48", nOrdering++, MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, null, null, null, 1, null);
             int nStreamID_macd3 = db.AddValueStream(nSrcID, "macd_32_96", nOrdering++, MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, null, null, null, 1, null);
+            int nStreamID_macd4 = (!m_bEnableExtendedData) ? 0 : db.AddValueStream(nSrcID, "macd_3_6", nOrdering++, MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, null, null, null, 1, null);
+            int nStreamID_macd5 = (!m_bEnableExtendedData) ? 0 : db.AddValueStream(nSrcID, "macd_4_8", nOrdering++, MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, null, null, null, 1, null);
+            int nStreamID_macd6 = (!m_bEnableExtendedData) ? 0 : db.AddValueStream(nSrcID, "macd_6_12", nOrdering++, MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, null, null, null, 1, null);
+            int nStreamID_rsi1 = (!m_bEnableExtendedData) ? 0 : db.AddValueStream(nSrcID, "rsi_4", nOrdering++, MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, null, null, null, 1, null);
+            int nStreamID_rsi2 = (!m_bEnableExtendedData) ? 0 : db.AddValueStream(nSrcID, "rsi_6", nOrdering++, MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, null, null, null, 1, null);
+            int nStreamID_rsi3 = (!m_bEnableExtendedData) ? 0 : db.AddValueStream(nSrcID, "rsi_14", nOrdering++, MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, MyCaffe.basecode.descriptors.ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, null, null, null, 1, null);
             int nStreamID_tickerid = db.AddValueStream(nSrcID, "Ticker ID", nOrdering++, ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL);
+
+            int nStreamID_dayofweek = (m_lossType == DataRecord.LOSS_TYPE.SHARPE) ? 0 : db.AddValueStream(nSrcID, "day_of_week", nOrdering++, ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC);
+            int nStreamID_dayofmonth = (m_lossType == DataRecord.LOSS_TYPE.SHARPE) ? 0 : db.AddValueStream(nSrcID, "day_of_month", nOrdering++, ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC);
+            int nStreamID_monthofyear = (m_lossType == DataRecord.LOSS_TYPE.SHARPE) ? 0 : db.AddValueStream(nSrcID, "month_of_year", nOrdering++, ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC);
 
             RawValueDataCollection dataStatic = new RawValueDataCollection(null);
             dataStatic.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.STATIC, ValueStreamDescriptor.STREAM_VALUE_TYPE.CATEGORICAL, nStreamID_tickerid));
@@ -245,6 +265,23 @@ namespace dnn.net.dataset.tft.commodity
             data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_macd1));
             data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_macd2));
             data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_macd3));
+
+            if (m_bEnableExtendedData)
+            {
+                data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_macd4));
+                data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_macd5));
+                data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_macd6));
+                data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_rsi1));
+                data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_rsi2));
+                data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.OBSERVED, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_rsi3));
+            }
+
+            if (m_lossType == DataRecord.LOSS_TYPE.QUANTILE)
+            {
+                data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_dayofweek));
+                data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_dayofmonth));
+                data.Add(new RawValueData(ValueStreamDescriptor.STREAM_CLASS_TYPE.KNOWN, ValueStreamDescriptor.STREAM_VALUE_TYPE.NUMERIC, nStreamID_monthofyear));
+            }
 
             foreach (KeyValuePair<int, DataRecordCollection> kv in m_data.RecordsByCommodity)
             {
@@ -280,6 +317,23 @@ namespace dnn.net.dataset.tft.commodity
                     rgfData.Add((float)rec.NormalizedItem(DataRecord.FIELD.MACD1));
                     rgfData.Add((float)rec.NormalizedItem(DataRecord.FIELD.MACD2));
                     rgfData.Add((float)rec.NormalizedItem(DataRecord.FIELD.MACD3));
+
+                    if (m_bEnableExtendedData)
+                    {
+                        rgfData.Add((float)rec.NormalizedItem(DataRecord.FIELD.MACD4));
+                        rgfData.Add((float)rec.NormalizedItem(DataRecord.FIELD.MACD5));
+                        rgfData.Add((float)rec.NormalizedItem(DataRecord.FIELD.MACD6));
+                        rgfData.Add((float)rec.NormalizedItem(DataRecord.FIELD.RSI1));
+                        rgfData.Add((float)rec.NormalizedItem(DataRecord.FIELD.RSI2));
+                        rgfData.Add((float)rec.NormalizedItem(DataRecord.FIELD.RSI3));
+                    }
+
+                    if (m_lossType == DataRecord.LOSS_TYPE.QUANTILE)
+                    {
+                        rgfData.Add((float)rec.NormalizedItem(DataRecord.FIELD.DAY_OF_WEEK));
+                        rgfData.Add((float)rec.NormalizedItem(DataRecord.FIELD.DAY_OF_MONTH));
+                        rgfData.Add((float)rec.NormalizedItem(DataRecord.FIELD.MONTH_OF_YEAR));
+                    }
 
                     for (int i=0; i<rgfData.Count; i++)
                     {
@@ -320,6 +374,8 @@ namespace dnn.net.dataset.tft.commodity
             db.UpdateSourceCounts(nItemCount);
             db.Close();
 
+            m_log.WriteLine(DataRecord.ToOutputTypeString(), true);
+
             return nSrcID;
         }
     }
@@ -331,6 +387,7 @@ namespace dnn.net.dataset.tft.commodity
         List<DataRecord> m_rgItems = new List<DataRecord>();
         ScalerCollection m_rgScalers = new ScalerCollection();
         double? m_dfLastDailyVol = null;
+        bool m_bMarkForDeletion = false;
 
         public DataRecordCollection(string strTicker)
         {
@@ -340,6 +397,11 @@ namespace dnn.net.dataset.tft.commodity
         public string Symbol
         {
             get { return m_strTicker; }
+        }
+
+        public bool MarkForDeletion
+        {
+            get { return m_bMarkForDeletion; }
         }
 
         public void GetDates(List<DateTime> rgDates)
@@ -388,6 +450,12 @@ namespace dnn.net.dataset.tft.commodity
             MACD macd_8_24 = new MACD(8, 24);
             MACD macd_16_48 = new MACD(16, 48);
             MACD macd_32_96 = new MACD(32, 96);
+            MACD macd_3_6 = new MACD(3, 6);
+            MACD macd_4_8 = new MACD(4, 8);
+            MACD macd_6_12 = new MACD(6, 12);
+            RSI rsi4 = new RSI(4);
+            RSI rsi6 = new RSI(6);
+            RSI rsi14 = new RSI(14);
 
             for (int i = 0; i < m_rgItems.Count-1; i++)
             {
@@ -430,9 +498,15 @@ namespace dnn.net.dataset.tft.commodity
                     double? dfNormBiannualReturns = ca.CalculateNormalizedReturns(126, dfDailyVol);
                     double? dfNormAnnualReturns = ca.CalculateNormalizedReturns(252, dfDailyVol);
 
-                    double? dfMacd_8_24 = macd_8_24.Calculate(dfSrs, rec.Date);
-                    double? dfMacd_16_48 = macd_16_48.Calculate(dfSrs, rec.Date);
-                    double? dfMacd_32_96 = macd_32_96.Calculate(dfSrs, rec.Date);
+                    double? dfMacd_3_6 = macd_3_6.Calculate(dfSrs, rec.Date, ref m_bMarkForDeletion);
+                    double? dfMacd_4_8 = macd_4_8.Calculate(dfSrs, rec.Date, ref m_bMarkForDeletion);
+                    double? dfMacd_6_12 = macd_6_12.Calculate(dfSrs, rec.Date, ref m_bMarkForDeletion);
+                    double? dfMacd_8_24 = macd_8_24.Calculate(dfSrs, rec.Date, ref m_bMarkForDeletion);
+                    double? dfMacd_16_48 = macd_16_48.Calculate(dfSrs, rec.Date, ref m_bMarkForDeletion);
+                    double? dfMacd_32_96 = macd_32_96.Calculate(dfSrs, rec.Date, ref m_bMarkForDeletion);
+                    double? dfRsi_4 = rsi4.Calculate(dfSrs, rec.Date);
+                    double? dfRsi_6 = rsi6.Calculate(dfSrs, rec.Date);
+                    double? dfRsi_14 = rsi14.Calculate(dfSrs, rec.Date);
 
                     if (dfNormAnnualReturns.HasValue && dfMacd_32_96.HasValue)
                     {
@@ -445,6 +519,15 @@ namespace dnn.net.dataset.tft.commodity
                         rec.Item(DataRecord.FIELD.MACD1, dfMacd_8_24.Value);
                         rec.Item(DataRecord.FIELD.MACD2, dfMacd_16_48.Value);
                         rec.Item(DataRecord.FIELD.MACD3, dfMacd_32_96.Value);
+                        rec.Item(DataRecord.FIELD.MACD4, dfMacd_3_6.Value);
+                        rec.Item(DataRecord.FIELD.MACD5, dfMacd_4_8.Value);
+                        rec.Item(DataRecord.FIELD.MACD6, dfMacd_6_12.Value);
+                        rec.Item(DataRecord.FIELD.RSI1, dfRsi_4.Value);
+                        rec.Item(DataRecord.FIELD.RSI2, dfRsi_6.Value);
+                        rec.Item(DataRecord.FIELD.RSI3, dfRsi_14.Value);
+                        rec.Item(DataRecord.FIELD.DAY_OF_WEEK, (int)rec.Date.DayOfWeek);
+                        rec.Item(DataRecord.FIELD.DAY_OF_MONTH, rec.Date.Day);
+                        rec.Item(DataRecord.FIELD.MONTH_OF_YEAR, rec.Date.Month);
                     }
                     else
                     {
@@ -520,7 +603,7 @@ namespace dnn.net.dataset.tft.commodity
             if (nLength == -1)
                 nLength = Count;
 
-            for (int i = 0; i < (int)DataRecord.FIELD.TOTAL; i++)
+            for (int i = 0; i < DataRecord.FieldTotal; i++)
             {
                 Scaler.SCALER scalerType = DataRecord.GetScalerType((DataRecord.FIELD)i);
                 Scaler scaler = ScalerCollection.CreateScaler(scalerType, nLength);
@@ -539,10 +622,10 @@ namespace dnn.net.dataset.tft.commodity
             m_rgItems.Add(rec);
 
             if (bSetScaler)
-                rec.IsValid = m_rgScalers.Add(rec.Fields);
+                rec.IsValid = m_rgScalers.Add(rec.Fields, DataRecord.FieldTotal);
 
             if (rec.IsValid && m_rgScalers.Count > 0)
-                m_rgScalers.Scale(rec.Fields, rec.NormalizedFields);
+                m_rgScalers.Scale(rec.Fields, rec.NormalizedFields, DataRecord.FieldTotal);
         }
 
         public DataRecord this[int nIdx]
@@ -604,20 +687,38 @@ namespace dnn.net.dataset.tft.commodity
         int m_nCommodityID;
         DateTime m_dt;
         double m_dfSrs;
-        double[] m_rgFields = new double[9];
-        double[] m_rgFieldsNormalized = new double[9];
+        double[] m_rgFields = new double[18];
+        double[] m_rgFieldsNormalized = new double[18];
+        static bool m_bExtendedData = false;
+        static LOSS_TYPE m_lossType = LOSS_TYPE.SHARPE;
+        static int m_nFieldTotal = 9;
 
-        static Scaler.SCALER[] m_rgScalerTypes = new Scaler.SCALER[9]
+        public enum LOSS_TYPE
+        {
+            SHARPE = 0,
+            QUANTILE = 1
+        }
+
+        static Scaler.SCALER[] m_rgScalerTypes = new Scaler.SCALER[18]
         {
             Scaler.SCALER.IDENTITY, // TARGET_RETURNS
-            Scaler.SCALER.CENTER,   // NORM_DAILY_RETURNS
-            Scaler.SCALER.CENTER,   // NORM_MONTHLY_RETURNS
-            Scaler.SCALER.CENTER,   // NORM_QUARTERLY_RETURNS
-            Scaler.SCALER.CENTER,   // NORM_BIANNUAL_RETURNS
-            Scaler.SCALER.CENTER,   // NORM_ANNUAL_RETURNS
-            Scaler.SCALER.CENTER,   // MACD1 
-            Scaler.SCALER.CENTER,   // MACD2 
-            Scaler.SCALER.CENTER,   // MACD2 
+            Scaler.SCALER.IDENTITY, // NORM_DAILY_RETURNS
+            Scaler.SCALER.IDENTITY, // NORM_MONTHLY_RETURNS
+            Scaler.SCALER.IDENTITY, // NORM_QUARTERLY_RETURNS
+            Scaler.SCALER.IDENTITY, // NORM_BIANNUAL_RETURNS
+            Scaler.SCALER.IDENTITY, // NORM_ANNUAL_RETURNS
+            Scaler.SCALER.IDENTITY, // MACD1 
+            Scaler.SCALER.IDENTITY, // MACD2 
+            Scaler.SCALER.IDENTITY, // MACD3 
+            Scaler.SCALER.IDENTITY, // MACD4 
+            Scaler.SCALER.IDENTITY, // MACD5 
+            Scaler.SCALER.IDENTITY, // MACD6 
+            Scaler.SCALER.IDENTITY, // RSI1
+            Scaler.SCALER.IDENTITY, // RSI2
+            Scaler.SCALER.IDENTITY, // RSI3
+            Scaler.SCALER.CENTER,   // DAY_OF_WEEK 
+            Scaler.SCALER.CENTER,   // DAY_OF_MONTH
+            Scaler.SCALER.CENTER,   // MONTH_OF_YEAR
         };
 
         public enum FIELD
@@ -631,20 +732,37 @@ namespace dnn.net.dataset.tft.commodity
             MACD1 = 6,
             MACD2 = 7,
             MACD3 = 8,
-
-            TOTAL = 9
+            MACD4 = 9,
+            MACD5 = 10,
+            MACD6 = 11,
+            RSI1 = 12,
+            RSI2 = 13,
+            RSI3 = 14,
+            DAY_OF_WEEK = 15,
+            DAY_OF_MONTH = 16,
+            MONTH_OF_YEAR = 17
         }
 
-        public DataRecord(int nCommodityID, DateTime dt, double dfSrs, string strCommodity)
+        public DataRecord(int nCommodityID, DateTime dt, double dfSrs, string strCommodity, bool bExtendedData, LOSS_TYPE lossType)
         {
             m_strCommodity = strCommodity;
             m_nCommodityID = nCommodityID;
             m_dt = dt;
             m_dfSrs = dfSrs;
             m_rgFields[(int)FIELD.TARGET_RETURNS] = dfSrs;
+            m_lossType = lossType;
+            m_bExtendedData = bExtendedData;
+
+            m_nFieldTotal = 9;
+
+            if (bExtendedData)
+                m_nFieldTotal += 6;
+
+            if (lossType == LOSS_TYPE.QUANTILE)
+                m_nFieldTotal += 3;
         }
 
-        public DataRecord(int nCommodityID, DateTime dt, double dfTarget, double dfNormDaily, double dfNormMonthly, double dfNormQuarterly, double dfNormBiannual, double dfNormAnnual, double dfMacd1, double dfMacd2, double dfMacd3)
+        public DataRecord(int nCommodityID, DateTime dt, double dfTarget, double dfNormDaily, double dfNormMonthly, double dfNormQuarterly, double dfNormBiannual, double dfNormAnnual, double dfMacd1, double dfMacd2, double dfMacd3, bool bExtendedData, LOSS_TYPE lossType)
         {
             m_nCommodityID = nCommodityID;
             m_dt = dt;
@@ -657,6 +775,59 @@ namespace dnn.net.dataset.tft.commodity
             m_rgFields[(int)FIELD.MACD1] = dfMacd1;
             m_rgFields[(int)FIELD.MACD2] = dfMacd2;
             m_rgFields[(int)FIELD.MACD3] = dfMacd3;
+            m_rgFields[(int)FIELD.DAY_OF_WEEK] = (int)dt.DayOfWeek;
+            m_rgFields[(int)FIELD.DAY_OF_MONTH] = dt.Day;
+            m_rgFields[(int)FIELD.MONTH_OF_YEAR] = dt.Month;
+
+            m_lossType = lossType;
+            m_bExtendedData = bExtendedData;
+
+            m_nFieldTotal = 9;
+
+            if (bExtendedData)
+                m_nFieldTotal += 6;
+
+            if (lossType == LOSS_TYPE.QUANTILE)
+                m_nFieldTotal += 3;
+        }
+
+        public static string ToOutputTypeString()
+        {
+            string str = "";
+
+            str = "--STATIC--" + Environment.NewLine;
+            str += "0.) Ticker ID" + Environment.NewLine + Environment.NewLine;
+
+            str += "--OBSERVED--" + Environment.NewLine;
+
+            int nIdx = 0;
+            for (int i=(int)FIELD.NORM_DAILY_RETURNS; i<= (int)FIELD.MACD3; i++)
+            {
+                str += nIdx.ToString() + ".) " + ((FIELD)i).ToString() + Environment.NewLine;
+                nIdx++;
+            }
+
+            if (m_bExtendedData)
+            {
+                for (int i = (int)FIELD.MACD4; i <= (int)FIELD.RSI3; i++)
+                {
+                    str += nIdx.ToString() + ".) " + ((FIELD)i).ToString() + Environment.NewLine;
+                    nIdx++;
+                }
+            }
+
+            if (m_lossType == LOSS_TYPE.QUANTILE)
+            {
+                str += "--KNOWN--" + Environment.NewLine;
+                nIdx = 0;
+                for (int i = (int)FIELD.DAY_OF_WEEK; i <= (int)FIELD.MONTH_OF_YEAR; i++)
+                {
+                    str += nIdx.ToString() + ".) " + ((FIELD)i).ToString() + Environment.NewLine;
+                    nIdx++;
+                }
+            }
+
+            return str;
         }
 
         public DataRecord Clone(DateTime dt)
@@ -665,7 +836,9 @@ namespace dnn.net.dataset.tft.commodity
                 m_nCommodityID,
                 dt,
                 m_dfSrs,
-                m_strCommodity);
+                m_strCommodity,
+                m_bExtendedData,
+                m_lossType);
             record.m_bValid = m_bValid;
             return record;
         }
@@ -678,6 +851,16 @@ namespace dnn.net.dataset.tft.commodity
         public string Symbol
         {
             get { return m_strCommodity; }
+        }
+
+        public LOSS_TYPE LossType
+        {
+            get { return m_lossType; }
+        }
+
+        public static int FieldTotal
+        {
+            get { return m_nFieldTotal; }
         }
 
         public bool IsValid
@@ -758,6 +941,7 @@ namespace dnn.net.dataset.tft.commodity
 
         public void PreProcess(DateTime dtStart, DateTime dtEnd, Log log, CancelEvent evtCancel, List<DateTime> rgDateSync)
         {
+            DateTime dtMax = DateTime.MinValue;
             List<int> rgDelete = new List<int>();          
             DateTime dtEndCutoff = dtEnd - TimeSpan.FromDays(2);
 
@@ -771,7 +955,13 @@ namespace dnn.net.dataset.tft.commodity
                     continue;
                 }
 
-                if (kv.Value.Items.First().Date > dtStart || kv.Value.Items.Last().Date < dtEndCutoff)
+                DateTime dtFirst = kv.Value.Items.First().Date;
+                DateTime dtLast = kv.Value.Items.Last().Date;
+
+                if (dtMax < dtLast)
+                    dtMax = dtLast;
+
+                if (dtFirst > dtStart || dtLast < dtEndCutoff)
                 {
                     rgDelete.Add(kv.Key);
                     continue;
@@ -803,6 +993,8 @@ namespace dnn.net.dataset.tft.commodity
                 }
 
                 kv.Value.PreProcess();
+                if (kv.Value.MarkForDeletion)
+                    rgDelete.Add(kv.Key);
                 nIdx++;
 
                 if (sw.Elapsed.TotalMilliseconds > 1000)
@@ -820,6 +1012,8 @@ namespace dnn.net.dataset.tft.commodity
             {
                 m_rgRecordsByCommodity.Remove(nKey);
             }
+
+            log.WriteLine("Preprocessing completed - " + m_rgRecordsByCommodity.Count.ToString() + " commodities remain.", true);
         }
 
         public DataTable Split(DateTime dtStart, DateTime dtEnd, DataTable dtScaler)
@@ -1007,7 +1201,7 @@ namespace dnn.net.dataset.tft.commodity
             m_caAnnual = new CalculationArray(252, true);
         }
 
-        public double? Calculate(double dfVal, DateTime dt)
+        public double? Calculate(double dfVal, DateTime dt, ref bool bInvalid)
         {
             if (!m_caShort.Add(dfVal, dt, false))
                 return null;
@@ -1029,9 +1223,50 @@ namespace dnn.net.dataset.tft.commodity
             double dfMacdFinal = dfQ / m_caAnnual.StdDev;
 
             if (double.IsNaN(dfMacdFinal) || double.IsInfinity(dfMacdFinal))
-                Trace.WriteLine("here.");
+                bInvalid = true;
 
             return dfMacdFinal;
+        }
+    }
+
+    class RSI
+    {
+        int m_nInterval = 0;
+        GraphDataRSI m_rsi;
+        RsiData m_rsiData;
+        PlotCollection m_plots = new PlotCollection();
+        PlotCollectionSet m_set = new PlotCollectionSet();
+
+        public RSI(int nInterval)
+        {
+            ConfigurationPlot cfg = new ConfigurationPlot();
+            cfg.PlotType = ConfigurationPlot.PLOTTYPE.RSI;
+            cfg.Interval = (uint)nInterval;
+            m_rsi = new GraphDataRSI(cfg);
+            m_nInterval = nInterval;
+
+            m_set.Add(m_plots);
+            m_rsiData = m_rsi.Pre(m_set, 0);
+        }
+
+        public double? Calculate(double dfVal, DateTime dt)
+        {
+            double dfLast = 0;
+            if (m_plots.Count > 0)
+                dfLast = m_plots[m_plots.Count - 1].Y;  
+
+            Plot plot = new Plot(dt.ToFileTime(), dfLast + dfVal);
+            plot.Tag = dt;
+
+            m_plots.Add(plot);
+
+            bool bActive;
+            double dfRsi = m_rsi.Process(m_rsiData, m_plots.Count - 1, out bActive, null, 0, false, true);
+
+            if (!bActive)
+                return null;
+
+            return dfRsi / 100.0;
         }
     }
 }
