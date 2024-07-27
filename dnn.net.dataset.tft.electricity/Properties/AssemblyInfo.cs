@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("SignalPop LLC")]
 [assembly: AssemblyProduct("DNN.net.dataset.tft.electricity")]
-[assembly: AssemblyCopyright("Copyright ©  2023 SignalPop LLC. All rights reserved.")]
+[assembly: AssemblyCopyright("Copyright ©  2023-2024 SignalPop LLC. All rights reserved.")]
 [assembly: AssemblyTrademark("SignalPop")]
 [assembly: AssemblyCulture("")]
 
