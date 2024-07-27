@@ -40,7 +40,8 @@
     <AssemblyOriginatorKeyFile>dnn.net.dataset.common.pfx</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="MyCaffe.basecode">
+    <Reference Include="MyCaffe.basecode, Version=1.12.3.55, Culture=neutral, PublicKeyToken=2541b18e2b82928f, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\_references\MyCaffe.basecode.dll</HintPath>
     </Reference>
     <Reference Include="SimpleGraphing">

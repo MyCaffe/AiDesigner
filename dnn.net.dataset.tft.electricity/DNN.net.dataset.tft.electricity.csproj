@@ -40,22 +40,28 @@
     <ApplicationIcon>MainIcon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="MyCaffe">
+    <Reference Include="MyCaffe, Version=1.12.3.55, Culture=neutral, PublicKeyToken=e967ea19bfd47a89, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\_references\MyCaffe.dll</HintPath>
     </Reference>
-    <Reference Include="MyCaffe.basecode">
+    <Reference Include="MyCaffe.basecode, Version=1.12.3.55, Culture=neutral, PublicKeyToken=2541b18e2b82928f, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\_references\MyCaffe.basecode.dll</HintPath>
     </Reference>
-    <Reference Include="MyCaffe.data">
+    <Reference Include="MyCaffe.data, Version=1.12.3.55, Culture=neutral, PublicKeyToken=5ee1e9f5e32cff5e, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\_references\MyCaffe.data.dll</HintPath>
     </Reference>
-    <Reference Include="MyCaffe.db.image">
+    <Reference Include="MyCaffe.db.image, Version=1.12.3.55, Culture=neutral, PublicKeyToken=e3ffe6b7993441fb, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\_references\MyCaffe.db.image.dll</HintPath>
     </Reference>
-    <Reference Include="MyCaffe.db.temporal">
+    <Reference Include="MyCaffe.db.temporal, Version=1.12.3.55, Culture=neutral, PublicKeyToken=22fdd224009b38e4, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\_references\MyCaffe.db.temporal.dll</HintPath>
     </Reference>
-    <Reference Include="SimpleGraphing">
+    <Reference Include="SimpleGraphing, Version=1.12.3.49, Culture=neutral, PublicKeyToken=db1fd361618e40f6, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\_references\SimpleGraphing.dll</HintPath>
     </Reference>
     <Reference Include="System" />
