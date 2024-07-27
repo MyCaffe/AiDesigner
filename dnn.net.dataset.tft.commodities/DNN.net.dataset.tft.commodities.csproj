@@ -56,7 +56,7 @@
       <HintPath>..\_references\MyCaffe.db.temporal.dll</HintPath>
     </Reference>
     <Reference Include="SimpleGraphing, Version=1.12.3.49, Culture=neutral, PublicKeyToken=db1fd361618e40f6, processorArchitecture=MSIL">
-      <HintPath>..\packages\SimpleGraphingControl.1.12.3.49\lib\net40\SimpleGraphing.dll</HintPath>
+      <HintPath>..\packages\SimpleGraphingControl.1.12.3.55\lib\net40\SimpleGraphing.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -83,6 +83,8 @@
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
     <Compile Include="CommodityData.cs" />
+    <Compile Include="SimpleGraphingDialog.cs" />
+    <Compile Include="SimpleGraphingDialog.Designer.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
@@ -101,6 +103,9 @@
       <Project>{5bca3ea3-d046-4567-ad16-570680af0a40}</Project>
       <Name>DNN.net.dataset.common</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="SimpleGraphingDialog.resx" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
