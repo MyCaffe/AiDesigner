@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26730.3
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.34928.147
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DNN.net.dataset.common", "dnn.net.dataset.common\DNN.net.dataset.common.csproj", "{5BCA3EA3-D046-4567-AD16-570680AF0A40}"
 EndProject
@@ -12,6 +12,16 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DNN.net.dataset.csv", "dnn.net.dataset.csv\DNN.net.dataset.csv.csproj", "{ACBF1744-5539-4187-A30C-4D9C429B1155}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DNN.net.dataset.voc0712", "dnn.net.dataset.voc0712\DNN.net.dataset.voc0712.csproj", "{DC0B318B-1D64-424F-8625-C0A27A471A6F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DNN.net.dataset.tft.electricity", "dnn.net.dataset.tft.electricity\DNN.net.dataset.tft.electricity.csproj", "{F6985DA5-03D6-4FF9-8E7A-E0D8A6D4BFDF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DNN.net.dataset.tft.favorita", "dnn.net.dataset.tft.favorita\DNN.net.dataset.tft.favorita.csproj", "{49E3765F-271D-40B9-8E54-E8FF69A44749}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DNN.net.dataset.tft.traffic", "dnn.net.dataset.tft.traffic\DNN.net.dataset.tft.traffic.csproj", "{69C115BD-B702-4295-A1D2-6B6C2E6E0DB7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DNN.net.dataset.tft.volatility", "dnn.net.dataset.tft.volatility\DNN.net.dataset.tft.volatility.csproj", "{597D054C-C5B9-4395-ACD3-0D9A258C06FB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DNN.net.dataset.tft.commodities", "dnn.net.dataset.tft.commodities\DNN.net.dataset.tft.commodities.csproj", "{1E27A8E8-1974-49D5-85CB-26EC453D7863}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +49,26 @@ Global
 		{DC0B318B-1D64-424F-8625-C0A27A471A6F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DC0B318B-1D64-424F-8625-C0A27A471A6F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DC0B318B-1D64-424F-8625-C0A27A471A6F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F6985DA5-03D6-4FF9-8E7A-E0D8A6D4BFDF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F6985DA5-03D6-4FF9-8E7A-E0D8A6D4BFDF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F6985DA5-03D6-4FF9-8E7A-E0D8A6D4BFDF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F6985DA5-03D6-4FF9-8E7A-E0D8A6D4BFDF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{49E3765F-271D-40B9-8E54-E8FF69A44749}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{49E3765F-271D-40B9-8E54-E8FF69A44749}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{49E3765F-271D-40B9-8E54-E8FF69A44749}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{49E3765F-271D-40B9-8E54-E8FF69A44749}.Release|Any CPU.Build.0 = Release|Any CPU
+		{69C115BD-B702-4295-A1D2-6B6C2E6E0DB7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{69C115BD-B702-4295-A1D2-6B6C2E6E0DB7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{69C115BD-B702-4295-A1D2-6B6C2E6E0DB7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{69C115BD-B702-4295-A1D2-6B6C2E6E0DB7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{597D054C-C5B9-4395-ACD3-0D9A258C06FB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{597D054C-C5B9-4395-ACD3-0D9A258C06FB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{597D054C-C5B9-4395-ACD3-0D9A258C06FB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{597D054C-C5B9-4395-ACD3-0D9A258C06FB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1E27A8E8-1974-49D5-85CB-26EC453D7863}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E27A8E8-1974-49D5-85CB-26EC453D7863}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1E27A8E8-1974-49D5-85CB-26EC453D7863}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1E27A8E8-1974-49D5-85CB-26EC453D7863}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
