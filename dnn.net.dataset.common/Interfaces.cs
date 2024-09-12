@@ -139,7 +139,7 @@ namespace DNN.net.dataset.common
     /// </summary>
     public interface IXDatasetDataQuery
     {
-        int GetTotalAssets(bool bSkipActive);
+        int GetTotalAssets(string strRebalanceName);
         int GetAssetIDAt(int nIdx);
         int GetTotalPeriods(PERIOD_TYPE period);
         PlotCollection GetPlots(int nAssetID, PERIOD_TYPE period);
