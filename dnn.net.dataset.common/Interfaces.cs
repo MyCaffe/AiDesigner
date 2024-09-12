@@ -141,8 +141,8 @@ namespace DNN.net.dataset.common
     {
         int GetTotalAssets(string strRebalanceName);
         int GetAssetIDAt(int nIdx);
-        int GetTotalPeriods(PERIOD_TYPE period);
-        PlotCollection GetPlots(int nAssetID, PERIOD_TYPE period);
+        int GetTotalPeriods(PERIOD_TYPE period, string strSignal);
+        PlotCollection GetPlots(int nAssetID, PERIOD_TYPE period, string strSignal);
         void CleanUp();
     }
 }
