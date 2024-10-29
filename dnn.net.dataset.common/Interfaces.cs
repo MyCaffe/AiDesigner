@@ -172,6 +172,10 @@ namespace DNN.net.dataset.common
     public interface IXDatasetDataQueryEx : IXDatasetDataQuery
     {
         /// <summary>
+        /// Returns true if the GetImages method is to be used instead of the GetPlots method.
+        /// </summary>
+        bool UseImages { get; }
+        /// <summary>
         /// Return the valid date time range for a given asset.
         /// </summary>
         /// <param name="nAssetID">Specifies the asset ID.</param>
