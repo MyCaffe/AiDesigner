@@ -139,9 +139,30 @@ namespace DNN.net.dataset.common
     /// </summary>
     public interface IXDatasetDataQuery
     {
+        /// <summary>
+        /// Get the total number of assets available.
+        /// </summary>
+        /// <param name="strRebalanceName">Specifies a rebalance name, if exists.</param>
+        /// <param name="rgParam">Specifies special parameters (optional).</param>
+        /// <returns>The total number of assets is returned.</returns>
         int GetTotalAssets(string strRebalanceName, Dictionary<string, string> rgParam = null);
+        /// <summary>
+        /// Get the asset ID at a given index.
+        /// </summary>
+        /// <param name="nIdx">Specifies the index.</param>
+        /// <returns>The asset ID is returned.</returns>
         int GetAssetIDAt(int nIdx);
+        /// <summary>
+        /// Get the plots for a given asset, period and signal.
+        /// </summary>
+        /// <param name="nAssetID">Specifies the asset ID.</param>
+        /// <param name="period">Specifies the period.</param>
+        /// <param name="strSignal">Specifies the signal to fill the price data with.</param>
+        /// <returns>A plot collection of data is returned.</returns>
         PlotCollection GetPlots(int nAssetID, PERIOD_TYPE period, string strSignal);
+        /// <summary>
+        /// Perform any clean up required.
+        /// </summary>
         void CleanUp();
     }
 
@@ -150,6 +171,26 @@ namespace DNN.net.dataset.common
     /// </summary>
     public interface IXDatasetDataQueryEx : IXDatasetDataQuery
     {
-        List<KeyValuePair<DateTime, Image>> GetImages(int nAssetID, PERIOD_TYPE period, string strSignal);
+        /// <summary>
+        /// Return the valid date time range for a given asset.
+        /// </summary>
+        /// <param name="nAssetID">Specifies the asset ID.</param>
+        /// <returns>A tuple of the start and end date of valid time for the asset is returned.</returns>
+        Tuple<DateTime, DateTime> GetValidDateTimeRange(int nAssetID);
+        /// <summary>
+        /// Set the current date time.
+        /// </summary>
+        /// <param name="dt">Specifies the time to set.</param>
+        void SetDateTime(DateTime dt);
+        /// <summary>
+        /// Get a list of images for a given asset, period and signal.
+        /// </summary>
+        /// <param name="nAssetID">Specifies the asset ID.</param>
+        /// <param name="period">Specifies the period.</param>
+        /// <param name="strSignal">Specifies the signal.</param>
+        /// <param name="nPastCount">Specifies the number of past data points to include in the image and plots returned.  NOTE: The index returned sits at the very end of the past plots.</param>
+        /// <param name="nFutureCount">Specifies the number of future data points to include in the plots returned.</param>
+        /// <returns>A tuple of the date time, image, plot collection and current index is returned.</returns>
+        List<Tuple<DateTime, Image, PlotCollection, int>> GetImages(int nAssetID, PERIOD_TYPE period, string strSignal, int nPastCount, int nFutureCount);
     }
 }
