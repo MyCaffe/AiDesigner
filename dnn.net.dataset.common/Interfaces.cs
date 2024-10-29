@@ -144,4 +144,12 @@ namespace DNN.net.dataset.common
         PlotCollection GetPlots(int nAssetID, PERIOD_TYPE period, string strSignal);
         void CleanUp();
     }
+
+    /// <summary>
+    /// The IXDatasetDataQueryEx interface extends the base interface and allows for additional data queries.
+    /// </summary>
+    public interface IXDatasetDataQueryEx : IXDatasetDataQuery
+    {
+        List<KeyValuePair<DateTime, Image>> GetImages(int nAssetID, PERIOD_TYPE period, string strSignal);
+    }
 }
