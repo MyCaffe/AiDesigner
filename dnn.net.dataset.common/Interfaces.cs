@@ -36,28 +36,43 @@ namespace DNN.net.dataset.common
         HELP_FILE
     }
 
+    /// <summary>
+    /// Defines the period type.
+    /// </summary>
     public enum PERIOD_TYPE
     {
         /// <summary>
-        /// The period is a day.
+        /// Specifies the daily period.
         /// </summary>
         DAY,
         /// <summary>
-        /// The period is 1 minute.
+        /// Specifies the 1 minute period.
         /// </summary>
         MIN_1,
         /// <summary>
-        /// The period is 5 minutes.
+        /// Specifies the 5 minute period.
         /// </summary>
         MIN_5,
         /// <summary>
-        /// The period is 15 minutes.
+        /// Specifies the 15 minute period.
         /// </summary>
         MIN_15,
         /// <summary>
-        /// This period is 60 minutes.
+        /// Specifies the 60 minute period.
         /// </summary>
-        MIN_60
+        MIN_60,
+        /// <summary>
+        /// Specifies the 10 second period.
+        /// </summary>
+        SEC_10,
+        /// <summary>
+        /// Specifies the 20 second period.
+        /// </summary>
+        SEC_20,
+        /// <summary>
+        /// Specifies the 30 second period.
+        /// </summary>
+        SEC_30
     }
 
     /// <summary>
