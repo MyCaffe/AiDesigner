@@ -176,6 +176,13 @@ namespace DNN.net.dataset.common
         /// <returns>A plot collection of data is returned.</returns>
         PlotCollection GetPlots(int nAssetID, PERIOD_TYPE period, string strSignal);
         /// <summary>
+        /// Get all signal plots for a given asset and period.
+        /// </summary>
+        /// <param name="nAssetID">Specifies the assetID</param>
+        /// <param name="period">Specifies the period.</param>
+        /// <returns>A PlotCollectionSet with all plots is returned.</returns>
+        PlotCollectionSet GetAllPlots(int nAssetID, PERIOD_TYPE period);
+        /// <summary>
         /// Perform any clean up required.
         /// </summary>
         void CleanUp();
