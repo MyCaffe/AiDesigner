@@ -168,6 +168,12 @@ namespace DNN.net.dataset.common
         /// <returns>The asset ID is returned.</returns>
         int GetAssetIDAt(int nIdx);
         /// <summary>
+        /// Get the asset ID based on its ticker.
+        /// </summary>
+        /// <param name="strTicker">Specifies the ticker.</param>
+        /// <returns>The asset ID is returned.</returns>
+        int GetAssetID(string strTicker);
+        /// <summary>
         /// Get the plots for a given asset, period and signal.
         /// </summary>
         /// <param name="nAssetID">Specifies the asset ID.</param>
