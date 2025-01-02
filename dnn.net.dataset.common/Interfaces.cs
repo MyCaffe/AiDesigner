@@ -192,6 +192,12 @@ namespace DNN.net.dataset.common
         /// Perform any clean up required.
         /// </summary>
         void CleanUp();
+        /// <summary>
+        /// Get the sector for a given asset.
+        /// </summary>
+        /// <param name="strTicker">Specifies the asset ticker.</param>
+        /// <returns>The sector name is returned.</returns>
+        string GetAssetSector(string strTicker);
     }
 
     /// <summary>
