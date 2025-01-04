@@ -1138,7 +1138,8 @@ namespace dnn.net.dataset.tft.commodity
             if (rg.Count < nOffset)
                 return null;
 
-            return CalculateStdDev(rg, nOffset, bEwm);
+            double dfVar;
+            return CalculateStdDev(rg, nOffset, bEwm, out dfVar);
         }
 
         public double? CalculateVolScaledReturns(double dfVolTarget, double? dfDailyVol, bool bEwm = true)
