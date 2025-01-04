@@ -60,7 +60,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\_references\MyCaffe.db.temporal.dll</HintPath>
     </Reference>
-    <Reference Include="SimpleGraphing, Version=1.12.3.49, Culture=neutral, PublicKeyToken=db1fd361618e40f6, processorArchitecture=MSIL">
+    <Reference Include="SimpleGraphing, Version=1.12.3.64, Culture=neutral, PublicKeyToken=a6a83653ab32d73a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\_references\SimpleGraphing.dll</HintPath>
     </Reference>
