@@ -165,8 +165,9 @@ namespace DNN.net.dataset.common
         /// Get the asset ID at a given index.
         /// </summary>
         /// <param name="nIdx">Specifies the index.</param>
+        /// <param name="strTicker">Returns the asset ticker.</param>
         /// <returns>The asset ID is returned.</returns>
-        int GetAssetIDAt(int nIdx);
+        int GetAssetIDAt(int nIdx, out string strTicker);
         /// <summary>
         /// Get the asset ID based on its ticker.
         /// </summary>
