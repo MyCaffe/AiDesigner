@@ -199,6 +199,13 @@ namespace DNN.net.dataset.common
         /// <param name="strTicker">Specifies the asset ticker.</param>
         /// <returns>The sector name is returned.</returns>
         string GetAssetSector(string strTicker);
+        /// <summary>
+        /// Return the asset properties that are available.
+        /// </summary>
+        /// <param name="strTicker">Specifies the asset ticker.</param>
+        /// <param name="dt">Optionally, specifies a data to get the properties on (defautl = null)</param>
+        /// <returns>The properties are returned in a dictionary.</returns>
+        Dictionary<string, string> GetAssetProperties(string strTicker, DateTime? dt = null);
     }
 
     /// <summary>
